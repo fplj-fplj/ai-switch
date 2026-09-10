@@ -60,6 +60,16 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      # The tauri-build build script runs for the desktop feature and validates
+      # every path tauri.conf.json declares — including the tsnet sidecar in
+      # `externalBin`. Upstream builds that Go binary before touching cargo for
+      # exactly this reason; see "Build sidecar binary" below.
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache-dependency-path: sidecar/ai-switch-tsnet/go.sum
+
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
         with:
@@ -73,6 +83,26 @@ jobs:
 
       - name: Frontend tests
         run: pnpm test:run
+
+      # tauri.conf.json declares two paths that must exist on disk before
+      # tauri-build will configure the crate: the frontend bundle (`../dist`,
+      # mapped to `web/`) and the tsnet sidecar in `externalBin`. Both are build
+      # artifacts and gitignored, so a fresh checkout has neither and cargo
+      # fails with "resource path ... doesn't exist" before a single test runs.
+      # release.yml produces them in this order too. `dist/` only needs to
+      # exist, not be current — nothing here runs the app.
+      - name: Build frontend assets
+        run: pnpm build
+
+      - name: Build sidecar binary
+        run: |
+          set -euo pipefail
+          host_triple="$(rustc -vV | sed -n 's/^host: //p')"
+          out="src-tauri/binaries/ai-switch-tsnet-${host_triple}"
+          mkdir -p src-tauri/binaries
+          (cd sidecar/ai-switch-tsnet \
+            && go build -trimpath -ldflags="-s -w" -o "../../${out}" .)
+          test -f "$out"
 
       - name: Rust tests
         run: pnpm rust:test
