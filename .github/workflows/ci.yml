@@ -107,6 +107,13 @@ jobs:
       - name: Rust tests
         run: pnpm rust:test
 
+      # The Android port moves the terminal subsystem out of `desktop` into its own
+      # `terminal` feature, which `standalone-server` also selects. release.yml
+      # exercised that configuration and this workflow did not, so a regression
+      # there would have surfaced only at release time.
+      - name: Check standalone server
+        run: pnpm server:check
+
   android-cross-check:
     name: Android cross-check (aarch64-linux-android)
     runs-on: ubuntu-latest
@@ -166,6 +173,20 @@ jobs:
             echo "AR_aarch64_linux_android=$bin/llvm-ar"
           } >> "$GITHUB_ENV"
           echo "Using NDK: $ndk"
+
+      # tauri-build validates `externalBin` and `resources` for every Tauri target,
+      # Android included (crates/tauri-build/src/lib.rs copies both without a mobile
+      # guard), and a fresh checkout has neither: `dist/` and the sidecar binary are
+      # gitignored build artifacts. This job only asks whether the crate compiles
+      # for Android, so it satisfies the path checks with stand-ins rather than
+      # paying for a Vite build and a Go cross-compile. The desktop job already
+      # builds the real ones, so their correctness is covered elsewhere.
+      - name: Stub packaging artifacts
+        if: steps.mobile-feature.outputs.present == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p dist src-tauri/binaries
+          : > src-tauri/binaries/ai-switch-tsnet-aarch64-linux-android
 
       - name: cargo check --target aarch64-linux-android
         if: steps.mobile-feature.outputs.present == 'true'
