@@ -16,7 +16,7 @@ use crate::services::route_model_capability::{
     advertised_model_catalog_entries, catalog_member_inputs, catalog_members,
     codex_reasoning_metadata,
 };
-use crate::terminal_manager::{
+use crate::core::agent_program::{
     agent_program_name, agent_supports_model_flag, agent_supports_reasoning, find_program_in_path,
 };
 use serde::Serialize;

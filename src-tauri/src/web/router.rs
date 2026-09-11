@@ -23,6 +23,7 @@ use crate::services::web_service::WebService;
 use crate::web::auth::{authorize_api_request, ApiAuthState, WebAuthLevel};
 use crate::web::handlers::{dispatch_command, is_sensitive_command, mask_listed_secret_payloads};
 use crate::web::static_assets::{resolve_static_file, static_bundle_present};
+#[cfg(feature = "terminal")]
 use crate::web::terminal_ws::terminal_socket;
 use crate::web::ws::events_socket;
 
@@ -131,14 +132,20 @@ fn build_panel_routes(context: WebServerContext) -> Router<WebServerContext> {
         ))
         .layer(middleware::from_fn(disable_api_caching));
 
-    Router::new()
+    let router = Router::new()
         .route("/health", get(health))
         .route(
             "/pairing/redeem",
             post(redeem_mobile_pairing).layer(middleware::from_fn(disable_api_caching)),
         )
-        .route("/ws/events", get(events_socket))
-        .route("/ws/terminal/:session_id", get(terminal_socket))
+        .route("/ws/events", get(events_socket));
+    // The terminal stream bridges a PTY, which only exists where the terminal
+    // subsystem is compiled in. `#[cfg]` cannot sit on a method call inside this
+    // chain, so the route is appended as its own statement.
+    #[cfg(feature = "terminal")]
+    let router = router.route("/ws/terminal/:session_id", get(terminal_socket));
+
+    router
         .nest("/api", api_router)
         .layer(h5_cors_layer())
         .merge(crate::saas::transport::routes())

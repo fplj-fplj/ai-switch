@@ -3,6 +3,8 @@ pub mod event_bridge;
 pub mod handlers;
 pub mod router;
 pub mod static_assets;
+#[cfg(feature = "terminal")]
 pub mod terminal_hub;
+#[cfg(feature = "terminal")]
 pub mod terminal_ws;
 pub mod ws;

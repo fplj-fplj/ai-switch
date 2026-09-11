@@ -4,8 +4,10 @@ use crate::services::deeplink_protocol_service::DeepLinkProtocolRuntime;
 use crate::services::route_proxy_service::RouteProxyRuntimeState;
 use crate::services::tailscale_service::TailscaleRuntimeState;
 use crate::services::web_service::WebServiceRuntimeState;
+#[cfg(feature = "terminal")]
 use crate::terminal_manager::TerminalManager;
 use crate::web::event_bridge::WebEventBroadcaster;
+#[cfg(feature = "terminal")]
 use crate::web::terminal_hub::TerminalHub;
 use sqlx::SqlitePool;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -57,7 +59,9 @@ pub struct AppState {
     pub route_proxy: RouteProxyRuntimeState,
     pub web_service: WebServiceRuntimeState,
     pub tailscale: TailscaleRuntimeState,
+    #[cfg(feature = "terminal")]
     pub terminals: TerminalManager,
+    #[cfg(feature = "terminal")]
     pub terminal_hub: Arc<TerminalHub>,
     pub event_broadcaster: Arc<WebEventBroadcaster>,
 }

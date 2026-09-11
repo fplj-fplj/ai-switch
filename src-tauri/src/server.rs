@@ -12,6 +12,7 @@ use crate::services::route_proxy_service::{RouteProxyRuntimeState, RouteProxySer
 use crate::services::route_recovery_service::RouteRecoveryService;
 use crate::services::tailscale_service::TailscaleRuntimeState;
 use crate::services::web_service::{WebService, WebServiceRuntimeState};
+#[cfg(feature = "terminal")]
 use crate::terminal_manager::TerminalManager;
 use crate::web::event_bridge::{EventEmitter, WebEventBroadcaster};
 use crate::web::router::build_shared_server_router;
@@ -378,6 +379,7 @@ async fn shutdown_runtime(state: &Arc<AppState>) {
         eprintln!("SaaS log queue could not drain before exit");
     }
     crate::services::tailscale_service::TailscaleService::shutdown(&state.tailscale).await;
+    #[cfg(feature = "terminal")]
     state.terminals.kill_all();
 }
 
@@ -441,7 +443,9 @@ pub async fn run_from_env() -> Result<(), String> {
         saas: crate::saas::SaasRuntime::default(),
         web_service: WebServiceRuntimeState::default(),
         tailscale: TailscaleRuntimeState::default(),
+        #[cfg(feature = "terminal")]
         terminals: TerminalManager::default(),
+        #[cfg(feature = "terminal")]
         terminal_hub: Arc::new(crate::web::terminal_hub::TerminalHub::default()),
         event_broadcaster: Arc::new(WebEventBroadcaster::new()),
     });

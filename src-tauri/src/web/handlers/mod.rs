@@ -6,6 +6,7 @@ use serde_json::{json, Value};
 use crate::app_state::AppState;
 use crate::core::sessions::{get_session_messages_core, list_sessions_core};
 use crate::core::settings::{get_settings_core, save_settings_core};
+#[cfg(feature = "terminal")]
 use crate::core::terminals::{
     create_terminal_session_core, kill_terminal_session_core, list_terminal_sessions_core,
     resize_terminal_core, resume_session_terminal_core, write_terminal_input_core,
@@ -60,6 +61,7 @@ use crate::services::route_recovery_service::{RecoveryRule, RouteRecoveryService
 use crate::services::route_relay_balance_service::RouteRelayBalanceService;
 use crate::services::target_service::TargetService;
 use crate::services::web_service::{WebService, WebServiceConfig};
+#[cfg(feature = "terminal")]
 use crate::terminal_manager::CreateTerminalSessionInput;
 use crate::web::event_bridge::EventEmitter;
 use std::collections::HashMap;
@@ -600,6 +602,7 @@ pub async fn dispatch_command(
                     .map_err(|message| command_error("web.session_read", message))?,
             )
         }
+        #[cfg(feature = "terminal")]
         "create_terminal_session" => {
             let input: CreateTerminalSessionInput = parse_arg(&args, "input")?;
             to_value(
@@ -612,6 +615,7 @@ pub async fn dispatch_command(
                 .map_err(|message| command_error("web.terminal_create", message))?,
             )
         }
+        #[cfg(feature = "terminal")]
         "resume_session_terminal" => {
             let session_id = required_string_arg(&args, "sessionId")?;
             let cols = required_u16_arg(&args, "cols")?;
@@ -629,6 +633,7 @@ pub async fn dispatch_command(
                 .map_err(|message| command_error("web.terminal_resume", message))?,
             )
         }
+        #[cfg(feature = "terminal")]
         "write_terminal_input" => {
             let session_id = required_string_arg(&args, "sessionId")?;
             require_terminal_subscriber(&state, &session_id)?;
@@ -637,6 +642,7 @@ pub async fn dispatch_command(
                 .map_err(|message| command_error("web.terminal_write", message))?;
             to_value(())
         }
+        #[cfg(feature = "terminal")]
         "resize_terminal" => {
             let session_id = required_string_arg(&args, "sessionId")?;
             require_terminal_subscriber(&state, &session_id)?;
@@ -646,6 +652,7 @@ pub async fn dispatch_command(
                 .map_err(|message| command_error("web.terminal_resize", message))?;
             to_value(())
         }
+        #[cfg(feature = "terminal")]
         "kill_terminal_session" => {
             let session_id = required_string_arg(&args, "sessionId")?;
             require_terminal_subscriber(&state, &session_id)?;
@@ -653,6 +660,7 @@ pub async fn dispatch_command(
                 .map_err(|message| command_error("web.terminal_kill", message))?;
             to_value(())
         }
+        #[cfg(feature = "terminal")]
         "list_terminal_sessions" => to_value(list_terminal_sessions_core(&state.terminals)),
         "list_agent_launch_options" => {
             to_value(AgentLaunchService::list_options(&state.pool).await?)
@@ -1262,6 +1270,7 @@ fn command_error(code: &'static str, message: String) -> ApiError {
     })
 }
 
+#[cfg(feature = "terminal")]
 fn require_terminal_subscriber(state: &Arc<AppState>, session_id: &str) -> Result<(), ApiError> {
     if state.terminal_hub.has_subscriber(session_id) {
         return Ok(());

@@ -3,10 +3,17 @@ use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, MasterPty, Pt
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{ErrorKind, Read, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(test)]
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
+use crate::core::agent_program::{
+    agent_program_name, agent_supports_model_flag, agent_supports_reasoning,
+};
+#[cfg(test)]
+use crate::core::agent_program::{executable_extensions, find_program_in_dirs};
 use crate::services::claude_trust_service;
 use crate::web::event_bridge::EventEmitter;
 use crate::web::terminal_hub::TerminalHub;
@@ -134,26 +141,6 @@ pub fn resolve_launch_command(
     }
 }
 
-/// Maps an agent platform id to the CLI entry point AI Switch spawns for it.
-pub fn agent_program_name(platform: &str) -> Option<&'static str> {
-    match platform.trim() {
-        "codex" => Some("codex"),
-        "claude" => Some("claude"),
-        "grok" => Some("grok"),
-        "gemini" => Some("gemini"),
-        "opencode" => Some("opencode"),
-        "openclaw" => Some("openclaw"),
-        "hermes" => Some("hermes"),
-        _ => None,
-    }
-}
-
-/// Only the CLIs whose `--model` flag has been verified take an explicit model
-/// argument; the rest keep whatever their own config selects.
-pub fn agent_supports_model_flag(platform: &str) -> bool {
-    matches!(platform.trim(), "codex" | "claude" | "grok" | "gemini")
-}
-
 /// True when this launch will start the Claude Code CLI, either as a fresh agent
 /// run or by replaying a `claude --resume ...` command.
 pub fn launches_claude(input: &CreateTerminalSessionInput) -> bool {
@@ -184,12 +171,6 @@ fn configure_launch_environment(command: &mut CommandBuilder, input: &CreateTerm
     }
 }
 
-/// Codex is the only agent that exposes a reasoning-effort knob AI Switch can
-/// set at launch time (`-c model_reasoning_effort=<level>`).
-pub fn agent_supports_reasoning(platform: &str) -> bool {
-    platform.trim() == "codex"
-}
-
 fn agent_launch_args(platform: &str, input: &CreateTerminalSessionInput) -> Vec<String> {
     let mut args = Vec::new();
     let model = input
@@ -217,55 +198,6 @@ fn agent_launch_args(platform: &str, input: &CreateTerminalSessionInput) -> Vec<
     }
 
     args
-}
-
-/// Resolves `program` against `PATH`, honoring `PATHEXT` on Windows where the
-/// agent CLIs are shims (`codex.cmd`, `codex.ps1`) rather than bare executables.
-pub fn find_program_in_path(program: &str) -> Option<PathBuf> {
-    let path = std::env::var_os("PATH")?;
-    let dirs = std::env::split_paths(&path).collect::<Vec<_>>();
-    let pathext = std::env::var("PATHEXT").unwrap_or_default();
-    find_program_in_dirs(&dirs, program, &pathext)
-}
-
-pub fn find_program_in_dirs(dirs: &[PathBuf], program: &str, pathext: &str) -> Option<PathBuf> {
-    let program = program.trim();
-    if program.is_empty() {
-        return None;
-    }
-
-    let extensions = executable_extensions(pathext);
-    for dir in dirs {
-        if dir.as_os_str().is_empty() {
-            continue;
-        }
-        let base = dir.join(program);
-        if base.is_file() {
-            return Some(base);
-        }
-        for extension in &extensions {
-            let candidate = dir.join(format!("{program}{extension}"));
-            if candidate.is_file() {
-                return Some(candidate);
-            }
-        }
-    }
-    None
-}
-
-fn executable_extensions(pathext: &str) -> Vec<String> {
-    pathext
-        .split(';')
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(|value| {
-            if value.starts_with('.') {
-                value.to_string()
-            } else {
-                format!(".{value}")
-            }
-        })
-        .collect()
 }
 
 impl TerminalManager {

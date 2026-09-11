@@ -1,6 +1,8 @@
 use serde::{Serialize, Serializer};
 use std::sync::Arc;
-#[cfg(feature = "desktop")]
+// The Android app renders the panel in its own WebView and receives events over
+// Tauri IPC, exactly like the desktop app, so it needs this variant too.
+#[cfg(any(feature = "desktop", feature = "mobile"))]
 use tauri::Emitter;
 use tokio::sync::broadcast;
 
@@ -60,7 +62,7 @@ impl WebEventBroadcaster {
 
 #[derive(Clone)]
 pub enum EventEmitter {
-    #[cfg(feature = "desktop")]
+    #[cfg(any(feature = "desktop", feature = "mobile"))]
     Tauri(tauri::AppHandle),
     #[allow(dead_code)]
     Web(Arc<WebEventBroadcaster>),
@@ -71,7 +73,7 @@ pub enum EventEmitter {
 impl EventEmitter {
     pub fn emit(&self, channel: &str, payload: &impl Serialize) {
         match self {
-            #[cfg(feature = "desktop")]
+            #[cfg(any(feature = "desktop", feature = "mobile"))]
             EventEmitter::Tauri(app) => {
                 let _ = app.emit(channel, payload);
             }

@@ -32,6 +32,7 @@ default = ["desktop"]
 desktop = [
   "dep:tauri",
   "tauri/default",
+  "tauri/tray-icon",
   "dep:tauri-plugin-autostart",
   "dep:tauri-plugin-deep-link",
   "dep:tauri-plugin-dialog",
@@ -39,14 +40,35 @@ desktop = [
   "dep:tauri-plugin-process",
   "dep:tauri-plugin-single-instance",
   "dep:tauri-plugin-updater",
+  "terminal",
 ]
-standalone-server = []
+standalone-server = ["terminal"]
+
+# The interactive terminal subsystem (agent sessions over a PTY). Both the
+# desktop app and the standalone server run it. The Android build cannot: there
+# is no PTY for it to attach to, and `portable-pty`'s Unix dependency chain
+# (nix / serial / termios / filedescriptor) is not something to bet a cross
+# compile on. Pulling it out of `desktop` into its own feature keeps the
+# standalone server's behaviour exactly as it was while giving `mobile` a way to
+# leave it behind.
+terminal = ["dep:portable-pty"]
+
+# The Android app. Tauri 2 mobile still links the `tauri` crate — that is not
+# optional — but none of the desktop plugins apply, and neither does
+# `tray-icon` (which is why it moved out of the dependency declaration below and
+# into `desktop`; cargo features on a dependency are global, so leaving it there
+# would have handed it to Android too). Built with
+# `tauri android build -f mobile -- --no-default-features`.
+mobile = [
+  "dep:tauri",
+  "tauri/default",
+]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", optional = true, default-features = false, features = ["tray-icon"] }
+tauri = { version = "2", optional = true, default-features = false }
 tauri-plugin-autostart = { version = "2", optional = true }
 tauri-plugin-opener = { version = "2", optional = true }
 tauri-plugin-process = { version = "2", optional = true }
@@ -76,7 +98,7 @@ rustls = { version = "0.23", default-features = false, features = ["ring"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "system-proxy", "cookies", "stream"] }
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 async-trait = "0.1"
-portable-pty = "0.8"
+portable-pty = { version = "0.8", optional = true }
 rcgen = { version = "0.13", features = ["x509-parser"] }
 sha1 = "0.10"
 time = { version = "0.3", features = ["formatting", "parsing"] }

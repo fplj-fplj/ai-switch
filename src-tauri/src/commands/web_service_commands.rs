@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use tauri::State;
+#[cfg(feature = "desktop")]
 use tauri_plugin_opener::OpenerExt;
 
 use crate::app_state::AppState;
@@ -92,9 +93,15 @@ pub async fn start_tailscale_login(
         .map(str::trim)
         .filter(|value| !value.is_empty())
     {
+        // `tauri-plugin-opener` is a desktop dependency. On Android the sign-in
+        // URL still comes back in `login.login_url` for the UI to open itself, so
+        // the flow degrades to "tap the link" rather than failing.
+        #[cfg(feature = "desktop")]
         if let Err(error) = app.opener().open_url(login_url, None::<&str>) {
             login.message = format!("Sign-in page ready, but browser open failed: {error}");
         }
+        #[cfg(not(feature = "desktop"))]
+        let _ = (&app, login_url);
     }
 
     Ok(login)
