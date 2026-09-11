@@ -192,3 +192,116 @@ jobs:
         if: steps.mobile-feature.outputs.present == 'true'
         working-directory: src-tauri
         run: cargo check --target aarch64-linux-android --no-default-features --features mobile
+
+  # Produces the installable artifact. Deliberately behind `workflow_dispatch` and
+  # behind `android-cross-check`: a Gradle + Rust cross-compile round is expensive,
+  # and there is no point starting one when the crate does not compile for Android.
+  android-apk:
+    name: Android APK (aarch64)
+    runs-on: ubuntu-latest
+    needs: android-cross-check
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # `NDK_HOME` has to be exported explicitly. The Tauri CLI looks for that exact
+      # variable and reports the NDK as missing even when it is installed.
+      - name: Install Android NDK
+        run: |
+          set -euo pipefail
+          sdkmanager --install "ndk;27.0.12077973"
+          echo "NDK_HOME=${ANDROID_SDK_ROOT}/ndk/27.0.12077973" >> "$GITHUB_ENV"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: android-apk
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache-dependency-path: sidecar/ai-switch-tsnet/go.sum
+
+      # Must precede setup-node so its pnpm cache resolution can find pnpm.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      # tauri-build copies `externalBin` for the *target* triple, so Android needs
+      # its own sidecar — the host build the desktop job does is not it.
+      - name: Build sidecar binary for Android
+        run: |
+          set -euo pipefail
+          mkdir -p src-tauri/binaries
+          out="src-tauri/binaries/ai-switch-tsnet-aarch64-linux-android"
+          (cd sidecar/ai-switch-tsnet \
+            && GOOS=android GOARCH=arm64 CGO_ENABLED=0 \
+               go build -trimpath -ldflags="-s -w" -o "../../${out}" .)
+          test -s "$out"
+
+      - name: Init the Android project
+        run: pnpm tauri android init --ci
+
+      # `--no-default-features` is not optional here: `default = ["desktop"]`, and
+      # the Tauri CLI's build path adds only `tauri/custom-protocol` — unlike its
+      # dev path, it does not re-add the manifest's default features on your behalf.
+      # Without the flag the desktop plugins get compiled for Android and the build
+      # dies long before it reaches Gradle. `tauri android build` runs
+      # `beforeBuildCommand` (`pnpm build`) itself, so `dist/` is produced here.
+      - name: Build the APK
+        run: pnpm tauri android build --apk -t aarch64 -f mobile -- --no-default-features
+
+      # Gradle emits an unsigned release APK and Android will not install one. A
+      # throwaway self-signed key is enough to sideload for testing, and it keeps
+      # the workflow free of repository secrets. zipalign must precede signing —
+      # it rewrites the archive and would invalidate a signature applied first.
+      - name: Sign the APK
+        run: |
+          set -euo pipefail
+          build_tools="$(ls -d "${ANDROID_SDK_ROOT}"/build-tools/* | sort -V | tail -1)"
+          unsigned="$(find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | head -1)"
+          [ -n "$unsigned" ] || { echo "::error::the build produced no APK"; exit 1; }
+
+          keytool -genkeypair -v -keystore /tmp/release.keystore -alias ai-switch \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android -keypass android \
+            -dname "CN=AI Switch Android, O=AI Switch, C=US"
+
+          "$build_tools/zipalign" -f 4 "$unsigned" /tmp/aligned.apk
+          "$build_tools/apksigner" sign \
+            --ks /tmp/release.keystore --ks-pass pass:android --key-pass pass:android \
+            --out ai-switch-android-aarch64.apk /tmp/aligned.apk
+          "$build_tools/apksigner" verify --print-certs ai-switch-android-aarch64.apk
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-switch-android-aarch64
+          path: ai-switch-android-aarch64.apk
+          if-no-files-found: error
