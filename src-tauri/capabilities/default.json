@@ -1,7 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default permissions for the main AI Switch window.",
+  "description": "Default permissions for the main AI Switch window. Desktop only: every permission after core:default belongs to a plugin that the Android build does not link, and tauri-build rejects a capability naming a permission no compiled plugin provides.",
+  "platforms": ["macOS", "windows", "linux"],
   "windows": ["main"],
   "permissions": ["core:default", "updater:default", "autostart:default", "process:allow-restart", "dialog:allow-open", "dialog:allow-save", "opener:allow-open-url", "opener:allow-default-urls"]
 }
