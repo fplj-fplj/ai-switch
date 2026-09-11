@@ -24,6 +24,17 @@ mod skills;
 mod terminal_manager;
 mod web;
 
+// `desktop.rs` and `mobile.rs` each define `run()`. Enabling both would fail with
+// a duplicate-symbol error pointing at an `include!` line, which says nothing
+// about the cause; `cargo build --features mobile` on top of the default features
+// is exactly how someone would trip it. `tauri android build` passes
+// `--no-default-features`, so this only ever fires on a hand-written command.
+#[cfg(all(feature = "desktop", feature = "mobile"))]
+compile_error!(
+    "`desktop` and `mobile` are mutually exclusive: build Android with \
+     `--no-default-features --features mobile` (tauri android build does this for you)."
+);
+
 #[cfg(feature = "desktop")]
 include!("desktop.rs");
 

@@ -83,6 +83,9 @@ pub async fn start_tailscale_login(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<TailscaleLogin, ApiError> {
+    // `mut` is only needed where the opener below can rewrite `login.message` on
+    // failure, which is desktop-only; on Android nothing reassigns it.
+    #[cfg_attr(not(feature = "desktop"), allow(unused_mut))]
     let mut login = WebService::start_tailscale_login(state.inner())
         .await
         .map_err(ApiError::from)?;

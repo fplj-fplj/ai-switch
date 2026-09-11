@@ -63,6 +63,9 @@ use crate::services::target_service::TargetService;
 use crate::services::web_service::{WebService, WebServiceConfig};
 #[cfg(feature = "terminal")]
 use crate::terminal_manager::CreateTerminalSessionInput;
+// Only the terminal dispatch arms below construct an `EventEmitter`, so without
+// the terminal subsystem this import has no users.
+#[cfg(feature = "terminal")]
 use crate::web::event_bridge::EventEmitter;
 use std::collections::HashMap;
 

@@ -1,13 +1,16 @@
-//! Android entry point.
-//!
-//! Included into `lib.rs` under the `mobile` feature, exactly like `desktop.rs`.
-//! Tauri's Android runtime reaches it through `#[tauri::mobile_entry_point]`.
-//!
-//! It is the desktop `run()` minus everything a phone has no equivalent for —
-//! tray, autostart, deep links, single instance, the updater and PTY-backed
-//! terminals — and it differs in one structural way: the desktop app resolves
-//! its data directory before the builder exists, while Android can only ask the
-//! app for `app_data_dir()` from inside `setup`.
+// Android entry point.
+//
+// Included into `lib.rs` under the `mobile` feature, exactly like `desktop.rs`
+// — which is also why these are `//` and not `//!`: an included file is spliced
+// in after `lib.rs`'s other items, and inner doc comments are only legal at the
+// start of a module. `//!` here fails with E0753 "expected outer doc comment".
+//
+// Tauri's Android runtime reaches `run()` through `#[tauri::mobile_entry_point]`.
+// It is the desktop `run()` minus everything a phone has no equivalent for —
+// tray, autostart, deep links, single instance, the updater and PTY-backed
+// terminals — and it differs in one structural way: the desktop app resolves its
+// data directory before the builder exists, while Android can only ask the app
+// for `app_data_dir()` from inside `setup`.
 
 use app_state::AppState;
 use commands::batch_commands::{
