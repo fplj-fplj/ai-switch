@@ -235,6 +235,9 @@ describe("AppLayout", () => {
     expect(expand).toHaveAttribute("aria-expanded", "false");
     expect(sidebar).not.toHaveClass("app-sidebar-drawer");
     expect(screen.queryByTestId("app-sidebar-drawer-backdrop")).not.toBeInTheDocument();
+    // With the drawer closed there is no rail either — navigation lives in the
+    // bottom bar, and the aside only exists while the drawer is open.
+    expect(sidebar).toHaveClass("hidden");
 
     await userEvent.click(expand);
 
@@ -246,7 +249,10 @@ describe("AppLayout", () => {
       "true",
     );
     expect(screen.getByText("智能体")).not.toHaveClass("hidden");
-    expect(screen.getByText("content").parentElement).toHaveClass("col-start-2");
+    // Narrow layouts navigate from a bottom bar, so the rail gives its column
+    // back and the content owns the full width; the drawer floats over it.
+    expect(screen.getByText("content").parentElement).toHaveClass("col-start-1");
+    expect(screen.getByTestId("app-bottom-nav")).toBeInTheDocument();
 
     await userEvent.click(screen.getByTestId("app-sidebar-drawer-backdrop"));
     expect(sidebar).not.toHaveClass("app-sidebar-drawer");

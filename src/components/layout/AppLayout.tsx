@@ -180,6 +180,49 @@ function NavButton({
   );
 }
 
+/**
+ * One destination in the narrow-layout bottom bar.
+ *
+ * Not `NavButton`: that is a list row for the sidebar, and it carries a shared
+ * `layoutId` indicator that two instances of would fight over. This is an icon
+ * above a label, sized so four fit across a phone.
+ */
+function BottomNavButton({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: LucideIcon | AgentIconPlatform;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const LucideIconComponent = typeof icon === "string" ? null : icon;
+
+  return (
+    <button
+      aria-current={active ? "page" : undefined}
+      className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 motion-control focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${
+        active ? "bg-white text-stone-950 shadow-sm" : "text-stone-500 hover:bg-white/70"
+      }`}
+      onClick={onClick}
+      title={label}
+      type="button"
+    >
+      {typeof icon === "string" ? (
+        <AgentIcon className="h-5 w-5" platform={icon} />
+      ) : LucideIconComponent ? (
+        <LucideIconComponent
+          aria-hidden="true"
+          className={`h-5 w-5 ${active ? "text-amber-600" : ""}`}
+        />
+      ) : null}
+      <span className="w-full truncate text-center text-[11px] font-medium">{label}</span>
+    </button>
+  );
+}
+
 export function AppLayout({
   children,
   activeScreen,
@@ -206,6 +249,10 @@ export function AppLayout({
   const accountWorkspaceActive = agentItems.some((item) => item.screen === activeScreen);
   const effectiveAgentVisibility = agentVisibility ?? localAgentVisibility;
   const visibleAgentItems = agentItems.filter((item) => effectiveAgentVisibility[item.platform]);
+  // The bottom bar's first destination is whichever agent screen is showing, so it
+  // follows the user's own visibility choices rather than pinning one platform.
+  const activeAgentItem =
+    visibleAgentItems.find((item) => item.screen === activeScreen) ?? visibleAgentItems[0];
   const sidebarDrawerVisible = narrowLayout && sidebarDrawerOpen;
   const sidebarContentCollapsed = narrowLayout ? !sidebarDrawerOpen : sidebarCollapsed;
   const desktopGridClass = sidebarCollapsed
@@ -311,7 +358,11 @@ export function AppLayout({
   return (
     <main className="box-border h-screen max-h-[100dvh] overflow-hidden text-stone-950">
       <div
-        className={`app-shell box-border grid h-full min-h-0 grid-cols-[56px_minmax(0,1fr)] ${desktopGridClass}`}
+        className={`app-shell box-border grid h-full min-h-0 ${
+          narrowLayout
+            ? "grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto]"
+            : "grid-cols-[56px_minmax(0,1fr)]"
+        } ${desktopGridClass}`}
         data-testid="app-shell"
         ref={appShellRef}
         style={
@@ -329,9 +380,19 @@ export function AppLayout({
           />
         )}
         <aside
+          // Narrow layouts navigate from the bottom bar, so the rail gives its
+          // column back to the content. The drawer still opens over everything —
+          // it is `position: fixed`, so it never needed a grid cell.
+          //
+          // `hidden` and `flex` are mutually exclusive here on purpose: UnoCSS
+          // orders its utilities by its own rule order, not by this string, and
+          // `flex` is emitted after `hidden` — so listing both leaves the rail
+          // laid out and intercepting taps despite the `hidden` class.
           className={`app-sidebar ${
+            narrowLayout && !sidebarDrawerVisible ? "hidden" : "flex"
+          } ${
             sidebarDrawerVisible ? "app-sidebar-drawer" : "relative"
-          } flex h-full min-h-0 flex-col overflow-hidden border-r border-white/80 bg-gradient-to-br from-slate-50/92 via-emerald-50/74 to-amber-50/70 shadow-xl shadow-stone-900/5 backdrop-blur-2xl ${
+          } h-full min-h-0 flex-col overflow-hidden border-r border-white/80 bg-gradient-to-br from-slate-50/92 via-emerald-50/74 to-amber-50/70 shadow-xl shadow-stone-900/5 backdrop-blur-2xl ${
             sidebarContentCollapsed ? "p-2" : "p-3"
           }`}
           data-testid="app-sidebar"
@@ -552,12 +613,54 @@ export function AppLayout({
         </aside>
 
         <section
-          className={`col-start-2 box-border h-full min-h-0 min-w-0 bg-stone-100 ${
+          className={`${
+            narrowLayout ? "col-start-1 row-start-1" : "col-start-2"
+          } box-border h-full min-h-0 min-w-0 bg-stone-100 ${
             accountWorkspaceActive ? "overflow-hidden p-0" : "overflow-y-auto p-2 sm:p-3"
           }`}
         >
           {children}
         </section>
+
+        {/* Narrow layouts navigate from the bottom. The rail is hidden above so the
+            content gets that column; the drawer still exists and "more" opens it,
+            which is where the full agent list and the per-agent visibility
+            switches live. A grid row rather than a fixed bar, so it cannot cover
+            the content and it inherits `#root`'s safe-area padding. */}
+        {narrowLayout && (
+          <nav
+            aria-label={t("layout.primary")}
+            className="col-start-1 row-start-2 flex items-stretch gap-1 border-t border-stone-200 bg-white/85 px-1.5 py-1.5 backdrop-blur-xl"
+            data-testid="app-bottom-nav"
+          >
+            {activeAgentItem ? (
+              <BottomNavButton
+                active={accountWorkspaceActive}
+                icon={activeAgentItem.icon}
+                label={t(activeAgentItem.labelKey)}
+                onClick={() => handleNavigate(activeAgentItem.screen)}
+              />
+            ) : null}
+            <BottomNavButton
+              active={settingsActive}
+              icon={Settings2}
+              label={t("nav.settings")}
+              onClick={() => handleNavigate("Settings")}
+            />
+            <BottomNavButton
+              active={activeScreen === "About"}
+              icon={Info}
+              label={t("nav.about")}
+              onClick={() => handleNavigate("About")}
+            />
+            <BottomNavButton
+              active={sidebarDrawerOpen}
+              icon={Menu}
+              label={t("layout.more")}
+              onClick={() => setSidebarDrawerOpen(true)}
+            />
+          </nav>
+        )}
       </div>
     </main>
   );
