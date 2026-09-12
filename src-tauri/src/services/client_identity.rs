@@ -155,8 +155,15 @@ pub fn codex_cli_user_agent() -> String {
 /// OS instead of taking a dependency to probe it. No gate parses the value, but a
 /// pair that cannot exist (`Windows 15.7.2`) is the kind of tell a fingerprinting
 /// relay looks for.
+///
+/// Read through [`reported_os`], not `std::env::consts::OS`, so this cannot
+/// contradict [`os_name`]. That pairing is the point: before this, Android
+/// produced `(android 22.4.0; arm64)` — a version from one OS next to a name from
+/// another — and because the value is never parsed, nothing failed. The catch-all
+/// is kept rather than enumerated because `os_name_for` maps every unknown OS to
+/// `Linux`, so the Linux release stays the consistent answer for all of them.
 fn os_version_hint() -> &'static str {
-    match std::env::consts::OS {
+    match reported_os() {
         "macos" => "15.7.2",
         "windows" => "11",
         _ => "22.4.0",
@@ -270,17 +277,61 @@ pub fn codex_engine_window_id(seed: &str) -> String {
         .to_string()
 }
 
-/// OS name mapped to the value the Claude/Codex CLIs report.
-pub fn os_name() -> &'static str {
-    match std::env::consts::OS {
-        "macos" => "MacOS",
-        "linux" => "Linux",
-        "windows" => "Windows",
-        other => other,
+/// The OS this process reports upstream, which is not always the OS it runs on.
+///
+/// Everything that reaches a fingerprint goes through here, so exactly one place
+/// decides what the outside world is told. Android is why this exists: a relay
+/// gate that admits only Claude Code clients rejects a request whose
+/// `x-stainless-os` says `android`, and no desktop build ever produces that, so
+/// it reads as a tell rather than a harmless difference.
+///
+/// The phone reports Linux instead. That is the honest-looking choice — an
+/// `x-stainless-os: Linux` client is unremarkable, whereas anything paired with
+/// `android` is a combination that does not exist outside this app.
+fn reported_os() -> &'static str {
+    #[cfg(target_os = "android")]
+    {
+        "linux"
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        std::env::consts::OS
     }
 }
 
+/// Maps a raw `std::env::consts::OS` value to the name the Claude/Codex CLIs
+/// report.
+///
+/// Split out from [`os_name`] so the mapping can be tested from the host. No test
+/// run here takes the `target_os = "android"` branch — that branch is precisely
+/// where the bug was, and it is also the one a host test cannot reach. Taking the
+/// raw value as an argument lets a test feed it `"android"` and assert what comes
+/// back.
+fn os_name_for(raw_os: &str) -> &'static str {
+    match raw_os {
+        "macos" => "MacOS",
+        "linux" => "Linux",
+        "windows" => "Windows",
+        // Not a platform either CLI has a name for. Echoing the raw name is how
+        // `android` reached `x-stainless-os` in the first place, so an unknown
+        // value reports what a real Linux client would rather than something no
+        // real client says.
+        _ => "Linux",
+    }
+}
+
+/// OS name mapped to the value the Claude/Codex CLIs report.
+pub fn os_name() -> &'static str {
+    os_name_for(reported_os())
+}
+
 /// CPU architecture mapped to the value the Claude/Codex CLIs report.
+///
+/// No platform override is needed: Android reports `aarch64`, which maps to
+/// `arm64` — the same value an Apple Silicon Mac reports, so there is nothing to
+/// disguise. The raw Rust name would be a tell, and the test below pins that it
+/// never escapes.
 pub fn arch_name() -> &'static str {
     match std::env::consts::ARCH {
         "aarch64" => "arm64",
@@ -519,5 +570,56 @@ mod tests {
         assert!(headers
             .iter()
             .any(|(name, _)| *name == "x-stainless-package-version"));
+    }
+
+    // The `target_os = "android"` branch of `reported_os()` cannot be taken by a
+    // test running on the host, and it is the branch that broke. These assert the
+    // property that branch depends on, by handing the mapping the value Android
+    // would have supplied had nothing intervened.
+    #[test]
+    fn no_operating_system_maps_to_android() {
+        assert_eq!(os_name_for("android"), "Linux");
+        for raw in ["android", "linux", "macos", "windows", "", "freebsd"] {
+            assert_ne!(
+                os_name_for(raw).to_ascii_lowercase(),
+                "android",
+                "raw os {raw:?} leaked through the mapping"
+            );
+        }
+    }
+
+    #[test]
+    fn identity_never_mentions_android() {
+        // The bug was not "os_name returned something odd" but "a header the
+        // relay reads said android", so assert on the artifacts that ship.
+        assert!(!codex_cli_user_agent().to_ascii_lowercase().contains("android"));
+        for (name, value) in claude_code_identity_headers() {
+            assert!(
+                !value.to_ascii_lowercase().contains("android"),
+                "{name} leaked android: {value}"
+            );
+        }
+    }
+
+    #[test]
+    fn codex_user_agent_carries_a_pair_that_can_exist() {
+        // A release from one OS next to a name from another is exactly what a
+        // fingerprinting relay looks for. `(android 22.4.0; arm64)` is the pair
+        // this used to send, and it is not in the list.
+        let agent = codex_cli_user_agent();
+        let plausible = [("MacOS", "15.7.2"), ("Windows", "11"), ("Linux", "22.4.0")];
+        assert!(
+            plausible
+                .iter()
+                .any(|(os, version)| agent.contains(os) && agent.contains(version)),
+            "Codex UA {agent:?} is not a pairing any real client sends"
+        );
+    }
+
+    #[test]
+    fn architecture_never_reports_the_rust_triple_name() {
+        // `std::env::consts::ARCH` says `aarch64` on an ARM device; the SDKs say
+        // `arm64`. The raw Rust name is the tell.
+        assert_ne!(arch_name(), "aarch64");
     }
 }
