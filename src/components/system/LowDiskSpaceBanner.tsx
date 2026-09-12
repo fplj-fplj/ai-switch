@@ -38,7 +38,7 @@ export function LowDiskSpaceBanner() {
   return (
     <div
       aria-live="assertive"
-      className="fixed left-1/2 top-3 z-[70] w-[min(calc(100vw-1.5rem),34rem)] -translate-x-1/2"
+      className="fixed left-1/2 top-[calc(0.75rem+env(safe-area-inset-top,0px))] z-[70] w-[min(calc(100vw-1.5rem),34rem)] -translate-x-1/2"
       role="alert"
     >
       <div className="rounded-2xl bg-red-50 px-4 py-3 shadow-lg ring-1 ring-red-200">

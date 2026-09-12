@@ -42,6 +42,19 @@ body,
   overflow: hidden;
 }
 
+/* Android draws the WebView edge to edge (API 35 enforces it), so the app's own
+   chrome would sit under the status bar and the gesture bar — on a device that
+   presents as a toolbar whose buttons cannot be tapped. Insetting the root is the
+   single place that covers every screen at once; the drawer and the top banners
+   are `position: fixed`, so they are inset separately where they are defined.
+   Zero on every other platform, and in a browser, because `env(safe-area-inset-*)`
+   has no value to report there. */
+#root {
+  box-sizing: border-box;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
 :root {
   color: #1d1d1f;
   background: #e8e6e1;
@@ -415,7 +428,12 @@ button:disabled {
 
 .app-sidebar-drawer {
   position: fixed;
-  inset: 0 auto 0 0;
+  /* Fixed elements are laid out against the viewport, not `#root`, so they do not
+     inherit its safe-area padding and have to apply the insets themselves —
+     otherwise the drawer runs under the status bar and its first rows are
+     unreachable. */
+  inset: env(safe-area-inset-top, 0px) auto env(safe-area-inset-bottom, 0px)
+    env(safe-area-inset-left, 0px);
   z-index: 50;
   width: min(var(--app-sidebar-width), calc(100vw - 3rem));
   max-width: 100vw;
