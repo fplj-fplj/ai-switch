@@ -141,6 +141,9 @@ export default defineConfig({
   envPrefix: ["VITE_", "TAURI_"],
   build: {
     target: "es2020",
-    minify: false,
+    // Was `false`, which shipped a 6.1 MB unminified bundle into the Android
+    // WebView — parsed and JIT'd on every cold start, on a phone. The desktop
+    // webview loads the same bundle from disk, so this is not a desktop decision.
+    minify: "esbuild",
   },
 });
