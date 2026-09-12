@@ -12,6 +12,7 @@ use crate::services::route_proxy_service::{
     SelectedCredential,
 };
 use chrono::{TimeZone, Utc};
+use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sqlx::SqlitePool;
