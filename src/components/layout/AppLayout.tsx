@@ -356,7 +356,12 @@ export function AppLayout({
   };
 
   return (
-    <main className="box-border h-screen max-h-[100dvh] overflow-hidden text-stone-950">
+    // `h-full`, not `h-screen`: `#root` carries the safe-area padding, so its
+    // content box is already the viewport minus the system bars. Sizing this to
+    // 100vh instead made it taller than its parent by the insets, and `#root`
+    // clips overflow — which silently cut the bottom inset's worth of pixels off
+    // the bottom navigation, labels included, on any device that reports insets.
+    <main className="box-border h-full max-h-full min-h-0 overflow-hidden text-stone-950">
       <div
         className={`app-shell box-border grid h-full min-h-0 ${
           narrowLayout
