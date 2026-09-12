@@ -24,7 +24,19 @@ impl DiskSpaceService {
         // is what actually breaks the app. They are the same volume on a standard
         // Windows or macOS install, but `/home` is frequently its own partition,
         // so probing only one of them would miss the other.
-        for candidate in [system_root(), data_dir.to_path_buf()] {
+        //
+        // Android is the exception. Its `/` is a read-only system image, and
+        // statvfs happily reports it as a small volume with zero bytes free — so
+        // probing it turned this warning into a permanent false alarm on a device
+        // with gigabytes to spare. `system_root()` returns None there and the data
+        // directory, which is the volume that actually matters, answers alone.
+        let mut candidates: Vec<PathBuf> = Vec::new();
+        if let Some(root) = system_root() {
+            candidates.push(root);
+        }
+        candidates.push(data_dir.to_path_buf());
+
+        for candidate in candidates {
             // A first run has not created `~/.ai-switch` yet, and both platforms
             // refuse to report space for a path that does not exist.
             let Some(probe) = existing_ancestor(&candidate) else {
@@ -63,9 +75,19 @@ impl DiskSpaceService {
     }
 }
 
-/// The root of the volume the OS itself is installed on.
-fn system_root() -> PathBuf {
-    #[cfg(windows)]
+/// The root of the volume the OS itself is installed on, when that is a question
+/// worth asking.
+///
+/// `None` on Android: `/` there is the read-only system image, not the volume the
+/// user or the app can write to, and statvfs reports it as full. The caller falls
+/// back to the data directory, which lives on the right volume.
+fn system_root() -> Option<PathBuf> {
+    #[cfg(target_os = "android")]
+    {
+        None
+    }
+
+    #[cfg(all(windows, not(target_os = "android")))]
     {
         // `%SystemDrive%` is the bare letter and colon ("C:"), which names the
         // process' current directory on that drive rather than its root, so the
@@ -73,12 +95,12 @@ fn system_root() -> PathBuf {
         let drive = std::env::var("SystemDrive").unwrap_or_else(|_| "C:".to_string());
         let drive = drive.trim().trim_end_matches(['\\', '/']);
         let drive = if drive.is_empty() { "C:" } else { drive };
-        PathBuf::from(format!("{drive}\\"))
+        Some(PathBuf::from(format!("{drive}\\")))
     }
 
-    #[cfg(not(windows))]
+    #[cfg(all(not(windows), not(target_os = "android")))]
     {
-        PathBuf::from("/")
+        Some(PathBuf::from("/"))
     }
 }
 
@@ -283,7 +305,10 @@ mod tests {
 
     #[test]
     fn a_data_dir_on_the_system_volume_is_reported_once() {
-        let status = DiskSpaceService::status_with_threshold(&system_root(), 0);
+        let status = DiskSpaceService::status_with_threshold(
+            &system_root().expect("desktop builds have a system root"),
+            0,
+        );
 
         assert_eq!(status.volumes.len(), 1, "{:?}", status.volumes);
     }
