@@ -198,7 +198,7 @@ import {
   writeUserAgentToConfig,
 } from "../lib/accountUserAgent";
 import { getTransport, isTauriRuntime } from "../lib/transport";
-import { isDesktopApp } from "../lib/platform";
+import { isDesktopApp, isMobileApp } from "../lib/platform";
 import { fetchRouteProxyModels } from "../lib/routeProxyModels";
 import { openExternal } from "../lib/openExternal";
 import { copySensitiveText } from "../lib/routeCredentialTransfer";
@@ -1856,6 +1856,57 @@ function CodexMappingCapabilityFields({
   );
 }
 
+/**
+ * Picks one of the fetched upstream models into a mapping field.
+ *
+ * The mapping inputs offer their suggestions through `<datalist>`, whose popup
+ * the WebView draws itself. On Android that list appears but choosing from it
+ * never commits to the controlled input, so the field stays empty and the mapping
+ * cannot be filled at all — which is why this exists.
+ *
+ * A native `<select>` is drawn by the platform and does commit; the same
+ * component already relies on one for the Claude request-model column. It carries
+ * the same choices, only on the platform that needs it, so the desktop keeps the
+ * inline suggestions it has always had.
+ */
+function FetchedModelPicker({
+  label,
+  models,
+  onPick,
+}: {
+  label: string;
+  models: FetchedRouteModel[];
+  onPick: (modelId: string) => void;
+}) {
+  if (models.length === 0) {
+    return null;
+  }
+
+  return (
+    <select
+      aria-label={label}
+      className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-[12px] text-stone-600 outline-none motion-control focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+      // Uncontrolled-looking on purpose: it is a picker, not a field. React resets
+      // it to the placeholder after every choice, so the same option can be picked
+      // twice in a row without the control appearing to already hold a value.
+      onChange={(event) => {
+        const picked = event.target.value;
+        if (picked) {
+          onPick(picked);
+        }
+      }}
+      value=""
+    >
+      <option value="">从已拉取的模型中选择…</option>
+      {models.map((model) => (
+        <option key={model.id} value={model.id}>
+          {model.owned_by ? `${model.id}（${model.owned_by}）` : model.id}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function ModelMappingsEditor({
   error,
   fetchError,
@@ -2059,6 +2110,13 @@ function ModelMappingsEditor({
                     value={mapping.from}
                   />
                 )}
+                {isMobileApp() && !isClaude ? (
+                  <FetchedModelPicker
+                    label={`从已拉取模型中选择请求模型 ${index + 1}`}
+                    models={fetchedModels}
+                    onPick={(modelId) => updateRow(index, { from: modelId })}
+                  />
+                ) : null}
                 <ArrowRight className="hidden h-4 w-4 text-stone-400 sm:block" />
                 <input
                   aria-label={`上游模型 ${index + 1}`}
@@ -2068,6 +2126,13 @@ function ModelMappingsEditor({
                   placeholder="例如：gpt-4o"
                   value={mapping.to}
                 />
+                {isMobileApp() ? (
+                  <FetchedModelPicker
+                    label={`从已拉取模型中选择上游模型 ${index + 1}`}
+                    models={fetchedModels}
+                    onPick={(modelId) => updateRow(index, { to: modelId })}
+                  />
+                ) : null}
                 {isClaude ? (
                   supportsOneM ? (
                     <label className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-stone-200 bg-white px-2.5 text-[12px] font-semibold text-stone-600">

@@ -3108,6 +3108,84 @@ describe("AccountsScreen", () => {
     );
   });
 
+  /**
+   * Android's WebView draws `<datalist>` suggestions itself and never commits the
+   * choice to a controlled input, so on a phone the mapping fields could be typed
+   * into but not filled from the list that was just fetched. That platform gets a
+   * native `<select>` carrying the same choices; the test after this one pins
+   * that the desktop keeps the datalist and no extra control.
+   */
+  it("fills a mapping from the fetched models through a select on mobile", async () => {
+    const originalUserAgent = window.navigator.userAgent;
+    Object.defineProperty(window.navigator, "userAgent", {
+      configurable: true,
+      value:
+        "Mozilla/5.0 (Linux; Android 15; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0 Mobile Safari/537.36",
+    });
+
+    try {
+      renderScreen();
+
+      await userEvent.click(await screen.findByRole("button", { name: "新增账号" }));
+      await userEvent.type(screen.getByLabelText("API 账号名称"), "Mobile API");
+      await userEvent.type(screen.getByLabelText("API Key"), "sk-mobile");
+      await userEvent.clear(screen.getByLabelText("Base URL"));
+      await userEvent.type(screen.getByLabelText("Base URL"), "https://api.mobile.test/v1");
+      await userEvent.click(screen.getByRole("button", { name: "获取模型列表" }));
+      expect(await screen.findByText(/已获取 2 个模型/)).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "新增映射" }));
+      await userEvent.selectOptions(
+        screen.getByLabelText("从已拉取模型中选择请求模型 1"),
+        "gpt-4o",
+      );
+      await userEvent.selectOptions(
+        screen.getByLabelText("从已拉取模型中选择上游模型 1"),
+        "gpt-5",
+      );
+
+      expect(screen.getByLabelText("请求模型 1")).toHaveValue("gpt-4o");
+      expect(screen.getByLabelText("上游模型 1")).toHaveValue("gpt-5");
+
+      await userEvent.click(screen.getByRole("button", { name: "保存账号" }));
+      await waitFor(() =>
+        expect(createApiRouteCredential).toHaveBeenCalledWith(
+          expect.objectContaining({
+            model_mappings_json: expect.stringContaining('"from":"gpt-4o"'),
+          }),
+        ),
+      );
+      expect(createApiRouteCredential).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model_mappings_json: expect.stringContaining('"to":"gpt-5"'),
+        }),
+      );
+    } finally {
+      Object.defineProperty(window.navigator, "userAgent", {
+        configurable: true,
+        value: originalUserAgent,
+      });
+    }
+  });
+
+  it("leaves the desktop mapping fields on the datalist alone", async () => {
+    renderScreen();
+
+    await userEvent.click(await screen.findByRole("button", { name: "新增账号" }));
+    await userEvent.type(screen.getByLabelText("API 账号名称"), "Desktop API");
+    await userEvent.type(screen.getByLabelText("API Key"), "sk-desktop");
+    await userEvent.click(screen.getByRole("button", { name: "获取模型列表" }));
+    expect(await screen.findByText(/已获取 2 个模型/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "新增映射" }));
+
+    expect(screen.queryByLabelText("从已拉取模型中选择上游模型 1")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("上游模型 1")).toHaveAttribute(
+      "list",
+      expect.stringContaining("fetched-models"),
+    );
+  });
+
   it.each(["claude", "gemini", "grok"] as const)(
     "only shows one-click model setup under Codex, not %s",
     async (platform) => {
