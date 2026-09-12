@@ -12,6 +12,8 @@ import {
 import type { ComponentType } from "react";
 import { getSettings, saveSettings } from "../lib/api/client";
 import { normalizeLanguage, supportedLanguages, useI18n, type Language } from "../lib/i18n";
+import { isDesktopApp, isMobileApp } from "../lib/platform";
+import { isScreenAvailable } from "../lib/screenAvailability";
 import { AutostartSettings } from "../components/settings/autostart-settings";
 import { RouteProxyHttpsSettings } from "../components/settings/route-proxy-https-settings";
 import { NotificationSettings } from "../components/settings/notification-settings";
@@ -94,6 +96,30 @@ const featureEntries: FeatureEntry[] = [
   },
 ];
 
+/**
+ * Whether this build offers the entry at all.
+ *
+ * Takes exactly one argument so it can be handed straight to `Array.filter`,
+ * which passes the index as the second one — a platform flag read from an index
+ * is a bug that only shows up from the second entry onwards.
+ *
+ * Screen entries defer to whatever the screen itself decided (`Sessions` and
+ * `Updates` are hidden on mobile). The `https` section is dropped here rather
+ * than by a screen: installing a local root certificate is a desktop action and
+ * its commands live behind `#[cfg(feature = "desktop")]`.
+ */
+function isFeatureEntryAvailable(entry: FeatureEntry) {
+  if (!isMobileApp()) {
+    return true;
+  }
+
+  if (entry.screen !== undefined) {
+    return isScreenAvailable(entry.screen, true);
+  }
+
+  return entry.section !== "https";
+}
+
 type SettingsScreenProps = {
   onOpenFeature?: (screen: string) => void;
   agentVisibility?: AgentVisibility;
@@ -168,7 +194,7 @@ export function SettingsScreen({
           <h2 className="text-[15px] font-semibold text-stone-950">{t("settings.features.title")}</h2>
         </div>
         <div className="grid gap-2 px-3 pb-3 sm:grid-cols-2 xl:grid-cols-3">
-          {featureEntries.map((entry) => {
+          {featureEntries.filter(isFeatureEntryAvailable).map((entry) => {
             const Icon = entry.icon;
             return (
               <button
@@ -266,50 +292,57 @@ export function SettingsScreen({
           {t("settings.dataDir", { path: settings.data_dir })}
         </p>
         <AutostartSettings />
-        <label className="flex max-w-xl items-start gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-[12px] font-semibold text-stone-700">
-          <input
-            aria-label={t("settings.ccswitch.label")}
-            checked={settings.ccswitch_deeplink_compat_enabled}
-            className="mt-0.5"
-            disabled={settings.ccswitch_deeplink_compat_supported === false || saveMutation.isPending}
-            onChange={(event) =>
-              saveMutation.mutate({
-                ...settings,
-                ccswitch_deeplink_compat_enabled: event.target.checked,
-              })
-            }
-            type="checkbox"
-          />
-          <span className="grid gap-1">
-            <span>{t("settings.ccswitch.label")}</span>
-            <span className="text-[11px] font-medium text-stone-500">
-              {settings.ccswitch_deeplink_compat_supported !== false
-                ? t("settings.ccswitch.warning")
-                : t("settings.ccswitch.unsupported")}
+        {/* The deep-link compat flag and close-to-tray both describe desktop
+            machinery — `tauri-plugin-deep-link` and the tray are not linked into
+            the APK, so on a phone they would be switches that do nothing. */}
+        {isDesktopApp() && (
+          <label className="flex max-w-xl items-start gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-[12px] font-semibold text-stone-700">
+            <input
+              aria-label={t("settings.ccswitch.label")}
+              checked={settings.ccswitch_deeplink_compat_enabled}
+              className="mt-0.5"
+              disabled={settings.ccswitch_deeplink_compat_supported === false || saveMutation.isPending}
+              onChange={(event) =>
+                saveMutation.mutate({
+                  ...settings,
+                  ccswitch_deeplink_compat_enabled: event.target.checked,
+                })
+              }
+              type="checkbox"
+            />
+            <span className="grid gap-1">
+              <span>{t("settings.ccswitch.label")}</span>
+              <span className="text-[11px] font-medium text-stone-500">
+                {settings.ccswitch_deeplink_compat_supported !== false
+                  ? t("settings.ccswitch.warning")
+                  : t("settings.ccswitch.unsupported")}
+              </span>
             </span>
-          </span>
-        </label>
-        <label className="flex max-w-xl items-start gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-[12px] font-semibold text-stone-700">
-          <input
-            aria-label={t("settings.closeToTray.label")}
-            checked={settings.close_to_tray}
-            className="mt-0.5"
-            disabled={saveMutation.isPending}
-            onChange={(event) =>
-              saveMutation.mutate({
-                ...settings,
-                close_to_tray: event.target.checked,
-              })
-            }
-            type="checkbox"
-          />
-          <span className="grid gap-1">
-            <span>{t("settings.closeToTray.label")}</span>
-            <span className="text-[11px] font-medium text-stone-500">
-              {t("settings.closeToTray.hint")}
+          </label>
+        )}
+        {isDesktopApp() && (
+          <label className="flex max-w-xl items-start gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-[12px] font-semibold text-stone-700">
+            <input
+              aria-label={t("settings.closeToTray.label")}
+              checked={settings.close_to_tray}
+              className="mt-0.5"
+              disabled={saveMutation.isPending}
+              onChange={(event) =>
+                saveMutation.mutate({
+                  ...settings,
+                  close_to_tray: event.target.checked,
+                })
+              }
+              type="checkbox"
+            />
+            <span className="grid gap-1">
+              <span>{t("settings.closeToTray.label")}</span>
+              <span className="text-[11px] font-medium text-stone-500">
+                {t("settings.closeToTray.hint")}
+              </span>
             </span>
-          </span>
-        </label>
+          </label>
+        )}
         <label className="flex max-w-sm flex-col gap-1.5 text-[12px] font-semibold text-stone-600">
           <span>{t("settings.language")}</span>
           <select

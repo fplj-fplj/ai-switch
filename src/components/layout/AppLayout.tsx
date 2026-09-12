@@ -21,6 +21,7 @@ import {
   type AgentVisibility,
 } from "../../lib/agentVisibility";
 import { supportedLanguages, useI18n, type Language } from "../../lib/i18n";
+import { isScreenAvailable } from "../../lib/screenAvailability";
 import { useDragResize } from "../../lib/useDragResize";
 
 export {
@@ -378,15 +379,17 @@ export function AppLayout({
                 >
                   <Menu aria-hidden="true" className="h-4 w-4" />
                 </button>
-                <button
-                  aria-label={t("layout.switchToVibe")}
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-stone-200 bg-white/70 text-stone-600 shadow-sm motion-control hover:border-stone-300 hover:bg-white hover:text-stone-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-                  onClick={handleOpenVibe}
-                  title={t("layout.switchToVibe")}
-                  type="button"
-                >
-                  <TerminalSquare aria-hidden="true" className="h-4 w-4" />
-                </button>
+                {isScreenAvailable("Vibe") && (
+                  <button
+                    aria-label={t("layout.switchToVibe")}
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-stone-200 bg-white/70 text-stone-600 shadow-sm motion-control hover:border-stone-300 hover:bg-white hover:text-stone-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                    onClick={handleOpenVibe}
+                    title={t("layout.switchToVibe")}
+                    type="button"
+                  >
+                    <TerminalSquare aria-hidden="true" className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -486,27 +489,33 @@ export function AppLayout({
                     onClick={() => handleNavigate("SaaS")}
                   />
                 )}
-                <NavButton
-                  active={activeScreen === "ImageGen"}
-                  collapsed={sidebarContentCollapsed}
-                  icon={Images}
-                  label={t("nav.imagegen")}
-                  onClick={() => handleNavigate("ImageGen")}
-                />
-                <NavButton
-                  active={activeScreen === "MCP"}
-                  collapsed={sidebarContentCollapsed}
-                  icon={PlugZap}
-                  label={t("nav.mcp")}
-                  onClick={() => handleNavigate("MCP")}
-                />
-                <NavButton
-                  active={activeScreen === "Skills"}
-                  collapsed={sidebarContentCollapsed}
-                  icon={Sparkles}
-                  label={t("nav.skills")}
-                  onClick={() => handleNavigate("Skills")}
-                />
+                {isScreenAvailable("ImageGen") && (
+                  <NavButton
+                    active={activeScreen === "ImageGen"}
+                    collapsed={sidebarContentCollapsed}
+                    icon={Images}
+                    label={t("nav.imagegen")}
+                    onClick={() => handleNavigate("ImageGen")}
+                  />
+                )}
+                {isScreenAvailable("MCP") && (
+                  <NavButton
+                    active={activeScreen === "MCP"}
+                    collapsed={sidebarContentCollapsed}
+                    icon={PlugZap}
+                    label={t("nav.mcp")}
+                    onClick={() => handleNavigate("MCP")}
+                  />
+                )}
+                {isScreenAvailable("Skills") && (
+                  <NavButton
+                    active={activeScreen === "Skills"}
+                    collapsed={sidebarContentCollapsed}
+                    icon={Sparkles}
+                    label={t("nav.skills")}
+                    onClick={() => handleNavigate("Skills")}
+                  />
+                )}
                 <NavButton
                   active={settingsActive}
                   collapsed={sidebarContentCollapsed}

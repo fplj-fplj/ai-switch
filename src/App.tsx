@@ -21,6 +21,7 @@ import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { I18nProvider } from "./lib/i18n";
 import { createQueryClient } from "./lib/query/queryClient";
 import { isDesktop, isLocalWebDevRuntime } from "./lib/transport";
+import { isScreenAvailable, resolveAvailableScreen } from "./lib/screenAvailability";
 import { AccountsScreen } from "./screens/AccountsScreen";
 import { AboutScreen } from "./screens/AboutScreen";
 import { BatchesScreen } from "./screens/BatchesScreen";
@@ -117,7 +118,13 @@ export function App() {
   }, [agentVisibility]);
 
   useEffect(() => {
-    const nextScreen = resolveVisibleAgentScreen(screen, agentVisibility);
+    // Two filters, in that order: the platform decides what exists here at all,
+    // the user decides which of the agent screens they want to see. A screen the
+    // phone does not offer has to be resolved on mount as well, which is why this
+    // runs on `screen` and not only when visibility changes.
+    const nextScreen = resolveAvailableScreen(
+      resolveVisibleAgentScreen(screen, agentVisibility),
+    );
     if (nextScreen === screen) return;
     screenRef.current = nextScreen;
     setNavigationDirection("neutral");
@@ -195,7 +202,7 @@ export function App() {
           <WebAuthGate onAuthenticated={handleWebAuthenticated} />
         ) : (
           <>
-            {vibeMounted && (
+            {vibeMounted && isScreenAvailable("Vibe") && (
               <motion.div
                 aria-hidden={!vibeActive}
                 className={vibeActive ? "vibe-host" : "vibe-host vibe-host--inactive"}
@@ -215,7 +222,9 @@ export function App() {
                 agentVisibility={agentVisibility}
                 onAgentVisibilityChange={setAgentVisibility}
                 onNavigate={navigate}
-                onOpenVibe={() => navigate("Vibe")}
+                onOpenVibe={
+                  isScreenAvailable("Vibe") ? () => navigate("Vibe") : undefined
+                }
                 onToggleSidebar={() => setSidebarCollapsed((value) => !value)}
                 sidebarCollapsed={sidebarCollapsed}
               >
@@ -234,11 +243,13 @@ export function App() {
                 {screen === "Batches" && <BatchesScreen />}
                 {screen === "Providers" && <ProvidersScreen />}
                 {screen === "Imports" && <ImportsScreen />}
-                {screen === "Targets" && <TargetsScreen />}
+                {screen === "Targets" && isScreenAvailable("Targets") && <TargetsScreen />}
                 {screen === "CryptoTools" && <CryptoToolsScreen />}
-                {screen === "OCR" && <OcrScreen />}
-                {screen === "Sessions" && <SessionsScreen initialPlatform={sessionPlatform} />}
-                {screen === "Updates" && <UpdatesScreen />}
+                {screen === "OCR" && isScreenAvailable("OCR") && <OcrScreen />}
+                {screen === "Sessions" && isScreenAvailable("Sessions") && (
+                  <SessionsScreen initialPlatform={sessionPlatform} />
+                )}
+                {screen === "Updates" && isScreenAvailable("Updates") && <UpdatesScreen />}
                 {screen === "Settings" && (
                   <SettingsScreen
                     agentVisibility={agentVisibility}
@@ -250,9 +261,9 @@ export function App() {
                   />
                 )}
                 {screen === "SaaS" && <SaasAdmin onConfigChanged={()=>void refreshSaas()} />}
-                {screen === "ImageGen" && <ImageGenerationScreen />}
-                {screen === "MCP" && <McpScreen />}
-                {screen === "Skills" && <SkillsScreen />}
+                {screen === "ImageGen" && isScreenAvailable("ImageGen") && <ImageGenerationScreen />}
+                {screen === "MCP" && isScreenAvailable("MCP") && <McpScreen />}
+                {screen === "Skills" && isScreenAvailable("Skills") && <SkillsScreen />}
                 {screen === "About" && <AboutScreen />}
                 {screen === "Log" && <OperationLogScreen />}
                   {!implementedScreens.has(screen) && (
