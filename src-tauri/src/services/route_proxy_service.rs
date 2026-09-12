@@ -63,7 +63,7 @@ use serde_json::{json, Value};
 use sqlx::{Row, SqlitePool};
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 use tokio::net::TcpListener;
 use tokio::sync::{oneshot, Mutex};
@@ -290,6 +290,16 @@ pub(crate) struct ProxyAppState {
     /// the call site so tests can drive a stalled upstream in milliseconds
     /// instead of waiting out the production ceiling.
     upstream_timeouts: OutboundTimeouts,
+    /// Upstream HTTP client, built once and then shared by every request.
+    ///
+    /// It used to be rebuilt inside `forward_request`, which threw away the
+    /// connection pool: each proxied call paid a fresh TCP connect and TLS
+    /// handshake to the upstream, and on a phone that handshake is the largest
+    /// per-request cost under our control. `OnceLock` rather than a plain field
+    /// because the builder returns a `Result` and this struct is built without an
+    /// error channel; the first request that needs it builds it, and every request
+    /// after reuses the same pool.
+    upstream_client: Arc<OnceLock<reqwest::Client>>,
 }
 
 #[derive(Clone)]
@@ -385,6 +395,7 @@ pub(crate) fn build_proxy_state(
         live_log: runtime.live_log.clone(),
         codex_history: CodexReasoningCache::default(),
         upstream_timeouts: ProxyAppState::default_upstream_timeouts(),
+        upstream_client: Arc::new(OnceLock::new()),
     }
 }
 
@@ -960,7 +971,17 @@ pub(crate) async fn forward_request(
 
     let custom_tool_names = collect_custom_tool_names(&body_bytes);
     let upstream_query = strip_route_proxy_auth_query(query.as_deref());
-    let client = build_outbound_http_client_with_timeouts(state.upstream_timeouts)?;
+    // Reuse the shared client so the upstream connection outlives one request.
+    // First caller builds it; everyone after rides the same pool. The error path is
+    // unchanged — a builder that fails still fails the request that needed it.
+    let client = match state.upstream_client.get() {
+        Some(client) => client.clone(),
+        None => {
+            let client = build_outbound_http_client_with_timeouts(state.upstream_timeouts)?;
+            let _ = state.upstream_client.set(client.clone());
+            client
+        }
+    };
     // Fallback for upstreams that fetch remote image URLs and reject non-image
     // Content-Types (e.g. OSS objects served as text/plain): when a routed
     // credential opts in, inline remote images as base64 data URLs up front.
@@ -11481,6 +11502,7 @@ data: [DONE]\n\n";
             live_log: RouteProxyLiveLog::default(),
             codex_history: CodexReasoningCache::default(),
             upstream_timeouts: ProxyAppState::default_upstream_timeouts(),
+            upstream_client: Arc::new(OnceLock::new()),
         };
 
         let mut headers = HeaderMap::new();
@@ -11514,6 +11536,7 @@ data: [DONE]\n\n";
             live_log: RouteProxyLiveLog::default(),
             codex_history: CodexReasoningCache::default(),
             upstream_timeouts: ProxyAppState::default_upstream_timeouts(),
+            upstream_client: Arc::new(OnceLock::new()),
         };
 
         let error = resolve_platform(&state, &HeaderMap::new(), None)
@@ -11542,6 +11565,7 @@ data: [DONE]\n\n";
             live_log: RouteProxyLiveLog::default(),
             codex_history: CodexReasoningCache::default(),
             upstream_timeouts: ProxyAppState::default_upstream_timeouts(),
+            upstream_client: Arc::new(OnceLock::new()),
         };
 
         let key = "sk-invalid";

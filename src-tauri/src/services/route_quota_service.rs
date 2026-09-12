@@ -18,6 +18,11 @@ use sqlx::SqlitePool;
 use std::time::Duration;
 
 const QUOTA_HTTP_TIMEOUT: Duration = Duration::from_secs(20);
+
+/// How many accounts a batch quota refresh sweeps at once. Deliberately the same
+/// number as the sibling relay-balance sweep so the two batch paths behave alike
+/// against a relay that is slow or rate-limiting.
+const QUOTA_BATCH_CONCURRENCY: usize = 4;
 const QUOTA_BODY_SNIPPET_CHARS: usize = 240;
 const CODEX_QUOTA_CLI_ORIGINATOR: &str = "codex_cli_rs";
 const CODEX_QUOTA_AGENT_IDENTITY_ORIGINATOR: &str = "Codex Desktop";
@@ -67,21 +72,29 @@ impl RouteQuotaService {
         PlatformCapabilityService::require(platform, PlatformOperation::OfficialQuota)?;
         let credentials =
             RouteCredentialRepository::list_by_platform(pool, platform.as_str()).await?;
-        let mut outcomes = Vec::with_capacity(credentials.len());
-        for credential in credentials {
-            if credential.kind != "official" {
-                continue;
-            }
-            match refresh_credential(pool, credential.clone()).await {
-                Ok(outcome) => outcomes.push(outcome),
-                Err(err) => outcomes.push(QuotaRefreshOutcome {
-                    credential,
-                    updated: false,
-                    source: "error".to_string(),
-                    message: Some(err.to_string()),
+        // Ordered and bounded, matching the relay-balance sweep in
+        // `route_relay_balance_service.rs`. Awaiting one upstream per account in
+        // turn made a batch cost the sum of its accounts, so one unresponsive
+        // relay held up every account behind it.
+        let outcomes = futures_util::stream::iter(
+            credentials
+                .into_iter()
+                .filter(|credential| credential.kind == "official")
+                .map(|credential| async move {
+                    match refresh_credential(pool, credential.clone()).await {
+                        Ok(outcome) => outcome,
+                        Err(err) => QuotaRefreshOutcome {
+                            credential,
+                            updated: false,
+                            source: "error".to_string(),
+                            message: Some(err.to_string()),
+                        },
+                    }
                 }),
-            }
-        }
+        )
+        .buffered(QUOTA_BATCH_CONCURRENCY)
+        .collect::<Vec<_>>()
+        .await;
         Ok(outcomes)
     }
 }
