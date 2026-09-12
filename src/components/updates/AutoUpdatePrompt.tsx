@@ -4,7 +4,7 @@ import { Download, RefreshCw, RotateCcw, ShieldAlert, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../../lib/i18n";
-import { isDesktop } from "../../lib/transport";
+import { isDesktopApp } from "../../lib/platform";
 import { ReleaseNotes } from "./ReleaseNotes";
 
 const AUTO_UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
@@ -34,7 +34,7 @@ export function AutoUpdatePrompt() {
   const checkInProgressRef = useRef(false);
 
   useEffect(() => {
-    if (!isDesktop() || typeof window === "undefined") {
+    if (!isDesktopApp() || typeof window === "undefined") {
       return;
     }
 

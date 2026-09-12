@@ -11,7 +11,7 @@ import {
 } from "../../lib/api/client";
 import type { WebServiceConfig } from "../../lib/api/types";
 import { useI18n } from "../../lib/i18n";
-import { isDesktop } from "../../lib/transport";
+import { isDesktopApp } from "../../lib/platform";
 import { TokenInput } from "../auth/TokenInput";
 import { TailscaleSettings } from "./tailscale-settings";
 
@@ -54,7 +54,7 @@ function normalizeConfig(config: WebServiceConfig): WebServiceConfig {
 export function WebServiceSettings() {
   const queryClient = useQueryClient();
   const { t } = useI18n();
-  const desktop = isDesktop();
+  const desktop = isDesktopApp();
   const configQuery = useQuery({
     queryKey: ["web-service-config"],
     queryFn: getWebServiceConfig,

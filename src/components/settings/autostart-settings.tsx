@@ -5,12 +5,12 @@ import {
   enableAutostart,
   isAutostartEnabled,
 } from "../../lib/autostart";
-import { isDesktop } from "../../lib/transport";
+import { isDesktopApp } from "../../lib/platform";
 
 const AUTOSTART_QUERY_KEY = ["autostart"] as const;
 
 export function AutostartSettings() {
-  const desktop = isDesktop();
+  const desktop = isDesktopApp();
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const stateQuery = useQuery({

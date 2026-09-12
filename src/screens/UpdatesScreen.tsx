@@ -3,7 +3,7 @@ import { check, type Update } from "@tauri-apps/plugin-updater";
 import { CheckCircle2, Download, RefreshCw, RotateCcw, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { useI18n, type Language } from "../lib/i18n";
-import { isDesktop } from "../lib/transport";
+import { isDesktopApp } from "../lib/platform";
 import { ReleaseNotes } from "../components/updates/ReleaseNotes";
 
 type DownloadState = {
@@ -43,7 +43,7 @@ export function UpdatesScreen() {
   // The updater plugin only exists inside the desktop shell; in a browser its
   // calls throw a bare "Cannot read properties of undefined", which is worse
   // than useless in an error banner.
-  const desktop = isDesktop();
+  const desktop = isDesktopApp();
   const [update, setUpdate] = useState<Update | null>(null);
   const [checking, setChecking] = useState(false);
   const [installing, setInstalling] = useState(false);

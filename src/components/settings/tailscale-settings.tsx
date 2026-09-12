@@ -12,7 +12,7 @@ import {
 import { useI18n } from "../../lib/i18n";
 import { ApiClientError } from "../../lib/api/errors";
 import { openExternal } from "../../lib/openExternal";
-import { isDesktop } from "../../lib/transport";
+import { isDesktopApp } from "../../lib/platform";
 
 type TailscaleSettingsProps = {
   enabled: boolean;
@@ -54,7 +54,7 @@ export function TailscaleSettings({ enabled, exposureMode = "private" }: Tailsca
       void statusQuery.refetch();
       // Desktop opens the browser from Rust, so auto-opening here would show
       // the login page twice. Web has no such hook and still needs it.
-      if (result.loginUrl && !isDesktop()) {
+      if (result.loginUrl && !isDesktopApp()) {
         void openExternal(result.loginUrl);
       }
     },

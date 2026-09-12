@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { createApiRouteCredential, getRoutePool, setRoutePoolMembers } from "../../lib/api/client";
 import type { CreateApiRouteCredentialInput, InterfaceFormat } from "../../lib/api/types";
-import { getTransport, isDesktop } from "../../lib/transport";
+import { getTransport } from "../../lib/transport";
+import { isDesktopApp } from "../../lib/platform";
 import { Button } from "../ui/Button";
 import { AnimatePresence, motion } from "motion/react";
 
@@ -51,7 +52,7 @@ export function DeepLinkImportDialog({ onImported }: DeepLinkImportDialogProps) 
   const [joinPool, setJoinPool] = useState(true);
 
   useEffect(() => {
-    if (!isDesktop()) {
+    if (!isDesktopApp()) {
       return;
     }
 

@@ -197,7 +197,8 @@ import {
   USER_AGENT_PRESETS,
   writeUserAgentToConfig,
 } from "../lib/accountUserAgent";
-import { getTransport, isDesktop, isTauriRuntime } from "../lib/transport";
+import { getTransport, isTauriRuntime } from "../lib/transport";
+import { isDesktopApp } from "../lib/platform";
 import { fetchRouteProxyModels } from "../lib/routeProxyModels";
 import { openExternal } from "../lib/openExternal";
 import { copySensitiveText } from "../lib/routeCredentialTransfer";
@@ -2798,7 +2799,7 @@ export function AccountsScreen({
   // Native file pickers come from the Tauri dialog plugin; in a browser they
   // reject, so the entry points that use them have to be disabled rather than
   // failing silently.
-  const desktop = isDesktop();
+  const desktop = isDesktopApp();
   const capabilitiesQuery = usePlatformCapabilities();
   const activeCapability = findPlatformCapability(capabilitiesQuery.data, activePlatform);
   const capabilityReady = capabilitiesQuery.isSuccess && Boolean(activeCapability);

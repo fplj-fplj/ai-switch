@@ -21,7 +21,7 @@ import {
   copySensitiveText,
   downloadRouteCredentialJson,
 } from "../../lib/routeCredentialTransfer";
-import { isDesktop } from "../../lib/transport";
+import { isDesktopApp } from "../../lib/platform";
 import { Button } from "../ui/Button";
 
 export type RouteCredentialExportDialogProps = {
@@ -67,7 +67,7 @@ export function RouteCredentialExportDialog({
   const jsonTabRef = useRef<HTMLButtonElement>(null);
   const linksTabRef = useRef<HTMLButtonElement>(null);
   const requestSequenceRef = useRef(0);
-  const desktop = isDesktop();
+  const desktop = isDesktopApp();
 
   useEffect(() => {
     if (open) {

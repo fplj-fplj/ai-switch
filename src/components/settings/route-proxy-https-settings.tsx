@@ -27,7 +27,7 @@ import type {
   RouteProxyTrustStatus,
 } from "../../lib/api/types";
 import { useI18n } from "../../lib/i18n";
-import { isDesktop } from "../../lib/transport";
+import { isDesktopApp } from "../../lib/platform";
 import { DismissButton } from "../ui/DismissButton";
 
 const queryKeys = {
@@ -322,7 +322,7 @@ export function RouteProxyHttpsSettings() {
               <Trash2 className="h-3.5 w-3.5" />
               {t("settings.https.deleteCertificates")}
             </button>
-            {isDesktop() ? (
+            {isDesktopApp() ? (
               <button
                 className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 py-2 text-[13px] font-semibold text-stone-700 motion-control hover:border-stone-300 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={!https.certReady || openDirectoryMutation.isPending}

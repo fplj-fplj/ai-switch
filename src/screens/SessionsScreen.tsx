@@ -23,7 +23,7 @@ import { agentPlatforms, type AgentPlatform } from "../components/layout/AppLayo
 import { getSessionMessages, listSessions, openSessionTerminal } from "../lib/api/client";
 import { useI18n, type Language } from "../lib/i18n";
 import type { SessionMessage, SessionMeta } from "../lib/api/types";
-import { isDesktop } from "../lib/transport";
+import { isDesktopApp } from "../lib/platform";
 import { MotionMenu } from "../components/motion/MotionPrimitives";
 import { DismissButton } from "../components/ui/DismissButton";
 
@@ -329,7 +329,7 @@ export function SessionsScreen({ initialPlatform = null }: SessionsScreenProps) 
     }
   };
 
-  const desktopRuntime = isDesktop();
+  const desktopRuntime = isDesktopApp();
   const canOpenTerminal = Boolean(
     desktopRuntime &&
       selectedSession?.projectDir?.trim() &&
