@@ -946,6 +946,12 @@ export type WebServiceConfig = {
   tlsEnabled?: boolean;
   tlsCertPath?: string | null;
   tlsKeyPath?: string | null;
+  /**
+   * Explicit permission to bind a non-loopback, cleartext listener. Off by
+   * default; the panel only sets it from a confirmed switch, and it is what lets
+   * the LAN address in the overlay actually answer.
+   */
+  allowLanAccess?: boolean;
 };
 
 export type WebServerStatus = {

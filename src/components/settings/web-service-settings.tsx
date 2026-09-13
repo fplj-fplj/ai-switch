@@ -11,7 +11,7 @@ import {
 } from "../../lib/api/client";
 import type { WebServiceConfig } from "../../lib/api/types";
 import { useI18n } from "../../lib/i18n";
-import { isDesktopApp } from "../../lib/platform";
+import { isDesktopApp, isMobileApp } from "../../lib/platform";
 import { TokenInput } from "../auth/TokenInput";
 import { TailscaleSettings } from "./tailscale-settings";
 
@@ -25,6 +25,7 @@ const defaultConfig: WebServiceConfig = {
   tlsEnabled: false,
   tlsCertPath: null,
   tlsKeyPath: null,
+  allowLanAccess: false,
 };
 
 const MINIMUM_WEB_TOKEN_LENGTH = 16;
@@ -48,13 +49,26 @@ function normalizeConfig(config: WebServiceConfig): WebServiceConfig {
     tlsEnabled: Boolean(config.tlsEnabled),
     tlsCertPath: config.tlsCertPath?.trim() || null,
     tlsKeyPath: config.tlsKeyPath?.trim() || null,
+    allowLanAccess: Boolean(config.allowLanAccess),
   };
 }
 
 export function WebServiceSettings() {
   const queryClient = useQueryClient();
   const { t } = useI18n();
+  // The listener is environment-managed only in the standalone server and the
+  // browser build, where a process or a proxy decides the address. The desktop app
+  // and the mobile app both own theirs — the phone runs the same shared listener
+  // on 19527, and the LAN switch below lives in this panel — so both get the
+  // editable form. Gating on `isDesktopApp()` alone left the panel showing nothing
+  // but a hint on Android.
+  const ownsListener = isDesktopApp() || isMobileApp();
+  // Tailscale is the one thing here that really is desktop-only: its sidecar is a
+  // Go binary that is not shipped in the APK.
   const desktop = isDesktopApp();
+  // Set while the LAN switch is being confirmed: flipping it on asks first, so the
+  // checkbox reads from the config and this only gates the warning block.
+  const [lanAccessPending, setLanAccessPending] = useState(false);
   const configQuery = useQuery({
     queryKey: ["web-service-config"],
     queryFn: getWebServiceConfig,
@@ -170,7 +184,7 @@ export function WebServiceSettings() {
           <p className="text-[12px] text-stone-500">{t("settings.webService.loading")}</p>
         ) : (
           <>
-            {desktop ? (
+            {ownsListener ? (
               <>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="flex flex-col gap-1.5 text-[12px] font-medium text-stone-600">
@@ -197,6 +211,71 @@ export function WebServiceSettings() {
                     />
                   </label>
                 </div>
+                {/* The switch owns the pair: it sets the permission and the host
+                    together, so the two can never disagree. Turning it on asks
+                    first — it is the one control here that reaches past this
+                    device. */}
+                <label className="flex max-w-xl items-start gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-[12px] font-semibold text-stone-700">
+                  <input
+                    aria-label={t("settings.webService.lanAccess")}
+                    checked={form.allowLanAccess === true}
+                    className="mt-0.5"
+                    onChange={(event) => {
+                      if (event.target.checked) {
+                        setLanAccessPending(true);
+                        return;
+                      }
+                      setLanAccessPending(false);
+                      setForm((current) => ({
+                        ...current,
+                        allowLanAccess: false,
+                        host: "127.0.0.1",
+                      }));
+                    }}
+                    type="checkbox"
+                  />
+                  <span className="grid gap-1">
+                    <span>{t("settings.webService.lanAccess")}</span>
+                    <span className="text-[11px] font-medium text-stone-500">
+                      {t("settings.webService.lanAccessHint")}
+                    </span>
+                  </span>
+                </label>
+                {lanAccessPending && form.allowLanAccess !== true ? (
+                  <div className="grid max-w-xl gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5">
+                    <p className="text-[12px] font-medium leading-5 text-amber-900">
+                      {t("settings.webService.lanAccessWarning")}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="rounded-lg bg-amber-700 px-3 py-1.5 text-[12px] font-semibold text-white motion-control hover:bg-amber-800"
+                        onClick={() => {
+                          setLanAccessPending(false);
+                          setForm((current) => ({
+                            ...current,
+                            allowLanAccess: true,
+                            host: "0.0.0.0",
+                          }));
+                        }}
+                        type="button"
+                      >
+                        {t("settings.webService.lanAccessConfirm")}
+                      </button>
+                      <button
+                        className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-[12px] font-semibold text-amber-900 motion-control hover:bg-amber-100"
+                        onClick={() => setLanAccessPending(false)}
+                        type="button"
+                      >
+                        {t("settings.webService.lanAccessCancel")}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                {form.allowLanAccess === true ? (
+                  <p className="max-w-xl rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
+                    {t("settings.webService.lanAccessOn")}
+                  </p>
+                ) : null}
                 {httpTransportRequiresTls ? (
                   <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
                     {t("settings.webService.hostTransportHint")}
@@ -269,7 +348,7 @@ export function WebServiceSettings() {
 
             <p className="text-[12px] text-stone-500">{t("settings.webService.sharedHint")}</p>
 
-            {desktop ? (
+            {ownsListener ? (
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   className="rounded-xl bg-stone-900 px-3 py-2 text-[13px] font-semibold text-white motion-control hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"

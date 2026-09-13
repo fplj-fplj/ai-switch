@@ -103,4 +103,56 @@ describe("WebServiceSettings", () => {
     expect(screen.queryByRole("button", { name: "停止服务端口" })).not.toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "启用算力池路由接入" })).toBeEnabled();
   });
+
+  it("asks before opening the listener to the network, then saves the permission and the host together", async () => {
+    renderSettings();
+
+    const toggle = await screen.findByLabelText("允许局域网访问");
+    expect(toggle).not.toBeChecked();
+
+    // Flipping it on does not commit. The warning comes first and the checkbox
+    // still reads from the config while it is up, so there is no state in which
+    // the permission is set but nothing said so.
+    await userEvent.click(toggle);
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByText(/本网络内任何设备都能访问/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "我明白，开启" }));
+    expect(toggle).toBeChecked();
+    // The switch owns the host as well, so the two can never disagree.
+    expect(screen.getByDisplayValue("0.0.0.0")).toBeInTheDocument();
+    expect(screen.getByText(/局域网访问已开启/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    await waitFor(() =>
+      expect(saveWebServiceConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ allowLanAccess: true, host: "0.0.0.0" }),
+      ),
+    );
+  });
+
+  it("returns the listener to loopback when LAN access is turned back off", async () => {
+    vi.mocked(getWebServiceConfig).mockResolvedValue({
+      host: "0.0.0.0",
+      port: 19527,
+      token: "0123456789abcdef",
+      routeAccessEnabled: true,
+      tailscaleEnabled: false,
+      tailscaleExposureMode: "private",
+      tlsEnabled: false,
+      tlsCertPath: null,
+      tlsKeyPath: null,
+      allowLanAccess: true,
+    });
+
+    renderSettings();
+
+    const toggle = await screen.findByLabelText("允许局域网访问");
+    expect(toggle).toBeChecked();
+
+    // Turning it off needs no confirmation: it narrows the exposure.
+    await userEvent.click(toggle);
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByDisplayValue("127.0.0.1")).toBeInTheDocument();
+  });
 });
