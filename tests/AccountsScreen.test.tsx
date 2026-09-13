@@ -4490,6 +4490,50 @@ describe("AccountsScreen", () => {
     });
   });
 
+  it("survives toggling a reasoning tier on mobile", async () => {
+    // Reported from a device: in a Codex mapping, picking a reasoning effort whites
+    // out the app. Nothing wraps AccountsScreen in an error boundary — only the Vibe
+    // screen has one — so any throw while rendering this form unmounts the whole
+    // tree. This drives the interaction on an Android user agent and fails with the
+    // stack if it throws.
+    const originalUserAgent = window.navigator.userAgent;
+    Object.defineProperty(window.navigator, "userAgent", {
+      configurable: true,
+      value:
+        "Mozilla/5.0 (Linux; Android 15; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0 Mobile Safari/537.36",
+    });
+
+    try {
+      const official = {
+        ...credentialsFixture[0],
+        config_json: JSON.stringify({
+          type: "codex",
+          model_mappings: [{ from: "gpt-5", to: "upstream-5" }],
+        }),
+      };
+      vi.mocked(listRouteCredentials).mockResolvedValue([official]);
+      vi.mocked(updateRouteCredential).mockResolvedValue(official);
+
+      renderScreen();
+
+      await userEvent.click(await screen.findByRole("button", { name: "编辑 Team Account" }));
+
+      // `gpt-5` is not one of the baseline profiles, so the row starts on the three
+      // efforts everything understands, all of them ticked.
+      const tier = screen.getByLabelText("推理程度 low 1");
+      await userEvent.click(tier);
+
+      expect(screen.getByLabelText("请求模型 1")).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "保存修改" }));
+      await waitFor(() => expect(updateRouteCredential).toHaveBeenCalled());
+    } finally {
+      Object.defineProperty(window.navigator, "userAgent", {
+        configurable: true,
+        value: originalUserAgent,
+      });
+    }
+  });
+
   it("saves the relay balance provider chosen in the advanced tab", async () => {
     vi.mocked(updateRouteCredential).mockResolvedValue(credentialsFixture[1]);
     renderScreen();

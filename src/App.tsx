@@ -216,64 +216,70 @@ export function App() {
               </motion.div>
             )}
             {!vibeActive && (
-              <AppLayout
-                saasEnabled={saasEnabled}
-                activeScreen={screen}
-                agentVisibility={agentVisibility}
-                onAgentVisibilityChange={setAgentVisibility}
-                onNavigate={navigate}
-                onOpenVibe={
-                  isScreenAvailable("Vibe") ? () => navigate("Vibe") : undefined
-                }
-                onToggleSidebar={() => setSidebarCollapsed((value) => !value)}
-                sidebarCollapsed={sidebarCollapsed}
-              >
-                <AnimatePresence initial={false} mode="wait">
-                  <MotionPage direction={navigationDirection} key={screen}>
-                    {agentPlatform && (
-                  <AccountsScreen
-                    onOpenSessions={openSessions}
-                    platform={agentPlatform}
-                    poolScopeFocus={poolScopeFocus}
-                    onPoolScopeFocusConsumed={handlePoolScopeFocusConsumed}
-                    sidebarCollapsed={sidebarCollapsed}
-                  />
-                )}
-                {screen === "Dashboard" && <DashboardScreen />}
-                {screen === "Batches" && <BatchesScreen />}
-                {screen === "Providers" && <ProvidersScreen />}
-                {screen === "Imports" && <ImportsScreen />}
-                {screen === "Targets" && isScreenAvailable("Targets") && <TargetsScreen />}
-                {screen === "CryptoTools" && <CryptoToolsScreen />}
-                {screen === "OCR" && isScreenAvailable("OCR") && <OcrScreen />}
-                {screen === "Sessions" && isScreenAvailable("Sessions") && (
-                  <SessionsScreen initialPlatform={sessionPlatform} />
-                )}
-                {screen === "Updates" && isScreenAvailable("Updates") && <UpdatesScreen />}
-                {screen === "Settings" && (
-                  <SettingsScreen
-                    agentVisibility={agentVisibility}
-                    onAgentVisibilityChange={(platform, visible) =>
-                      setAgentVisibility((current) => ({ ...current, [platform]: visible }))
-                    }
-                    onSaasConfigChanged={() => void refreshSaas()}
-                    onOpenFeature={navigate}
-                  />
-                )}
-                {screen === "SaaS" && <SaasAdmin onConfigChanged={()=>void refreshSaas()} />}
-                {screen === "ImageGen" && isScreenAvailable("ImageGen") && <ImageGenerationScreen />}
-                {screen === "MCP" && isScreenAvailable("MCP") && <McpScreen />}
-                {screen === "Skills" && isScreenAvailable("Skills") && <SkillsScreen />}
-                {screen === "About" && <AboutScreen />}
-                {screen === "Log" && <OperationLogScreen />}
-                  {!implementedScreens.has(screen) && (
-                    <div className="rounded-2xl border border-stone-200 bg-white/80 p-5 text-sm text-stone-500 shadow-sm">
-                      {screen}
-                    </div>
+              // Everything except Vibe renders inside this shell, and none of it had a
+              // boundary: one render throw unmounted the whole tree and left a blank
+              // window with nothing to show for it. `ErrorBoundary` was written for
+              // exactly that and was wired to Vibe alone.
+              <ErrorBoundary label="App">
+                <AppLayout
+                  saasEnabled={saasEnabled}
+                  activeScreen={screen}
+                  agentVisibility={agentVisibility}
+                  onAgentVisibilityChange={setAgentVisibility}
+                  onNavigate={navigate}
+                  onOpenVibe={
+                    isScreenAvailable("Vibe") ? () => navigate("Vibe") : undefined
+                  }
+                  onToggleSidebar={() => setSidebarCollapsed((value) => !value)}
+                  sidebarCollapsed={sidebarCollapsed}
+                >
+                  <AnimatePresence initial={false} mode="wait">
+                    <MotionPage direction={navigationDirection} key={screen}>
+                      {agentPlatform && (
+                    <AccountsScreen
+                      onOpenSessions={openSessions}
+                      platform={agentPlatform}
+                      poolScopeFocus={poolScopeFocus}
+                      onPoolScopeFocusConsumed={handlePoolScopeFocusConsumed}
+                      sidebarCollapsed={sidebarCollapsed}
+                    />
                   )}
-                  </MotionPage>
-                </AnimatePresence>
-              </AppLayout>
+                  {screen === "Dashboard" && <DashboardScreen />}
+                  {screen === "Batches" && <BatchesScreen />}
+                  {screen === "Providers" && <ProvidersScreen />}
+                  {screen === "Imports" && <ImportsScreen />}
+                  {screen === "Targets" && isScreenAvailable("Targets") && <TargetsScreen />}
+                  {screen === "CryptoTools" && <CryptoToolsScreen />}
+                  {screen === "OCR" && isScreenAvailable("OCR") && <OcrScreen />}
+                  {screen === "Sessions" && isScreenAvailable("Sessions") && (
+                    <SessionsScreen initialPlatform={sessionPlatform} />
+                  )}
+                  {screen === "Updates" && isScreenAvailable("Updates") && <UpdatesScreen />}
+                  {screen === "Settings" && (
+                    <SettingsScreen
+                      agentVisibility={agentVisibility}
+                      onAgentVisibilityChange={(platform, visible) =>
+                        setAgentVisibility((current) => ({ ...current, [platform]: visible }))
+                      }
+                      onSaasConfigChanged={() => void refreshSaas()}
+                      onOpenFeature={navigate}
+                    />
+                  )}
+                  {screen === "SaaS" && <SaasAdmin onConfigChanged={()=>void refreshSaas()} />}
+                  {screen === "ImageGen" && isScreenAvailable("ImageGen") && <ImageGenerationScreen />}
+                  {screen === "MCP" && isScreenAvailable("MCP") && <McpScreen />}
+                  {screen === "Skills" && isScreenAvailable("Skills") && <SkillsScreen />}
+                  {screen === "About" && <AboutScreen />}
+                  {screen === "Log" && <OperationLogScreen />}
+                    {!implementedScreens.has(screen) && (
+                      <div className="rounded-2xl border border-stone-200 bg-white/80 p-5 text-sm text-stone-500 shadow-sm">
+                        {screen}
+                      </div>
+                    )}
+                    </MotionPage>
+                  </AnimatePresence>
+                </AppLayout>
+              </ErrorBoundary>
             )}
           </>
         )}
