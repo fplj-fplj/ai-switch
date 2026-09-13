@@ -27,13 +27,12 @@ const MOBILE_HIDDEN_SCREENS: ReadonlySet<string> = new Set([
   "Targets",
   // `imagegen_commands` is `#[cfg(feature = "desktop")]`.
   "ImageGen",
-  // The operation log lists config-write snapshots, and its data path goes through
-  // `ConfigWriteCoordinator::reconcile_prepared` → `resolve_home_dir` →
-  // `BaseDirs`, which has no `$HOME` to resolve in an Android app process and
-  // fails. Even with that worked around the screen would be permanently empty:
-  // there are no CLI config files on a phone to snapshot, which is why writing
-  // them is on this same list.
-  "Log",
+  // `Log` is deliberately absent. It was on this list for two reasons, and neither
+  // holds: its command (`list_config_snapshots`) *is* registered for mobile, and the
+  // `BaseDirs` failure that did break it was in the Rust read path, which is where it
+  // was fixed. What the screen shows on a phone is an empty list — there are no CLI
+  // config files to have snapshots of — and an empty list that loads is worth more
+  // than a module that quietly disappears.
 ]);
 
 /**

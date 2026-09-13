@@ -50,7 +50,6 @@ describe("screen availability", () => {
       "Sessions",
       "Targets",
       "ImageGen",
-      "Log",
     ]) {
       expect(isScreenAvailable(screen, true)).toBe(false);
     }
@@ -60,6 +59,14 @@ describe("screen availability", () => {
     for (const screen of ["Codex", "Claude", "Settings", "About", "SaaS"]) {
       expect(isScreenAvailable(screen, true)).toBe(true);
     }
+  });
+
+  it("keeps the operation log on mobile", () => {
+    // Named on its own because it was hidden once, by mistake. The screen is empty on
+    // a phone — there are no CLI config files to have snapshots of — but it loads,
+    // and "no config operations recorded" is a truthful answer where a vanishing
+    // module is not.
+    expect(isScreenAvailable("Log", true)).toBe(true);
   });
 
   it("falls back to Settings, not to an agent screen the user may have hidden", () => {
