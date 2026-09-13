@@ -515,7 +515,7 @@ function LiveLogStage({ title, body }: { title: string; body: string | null | un
   return (
     <div>
       <p className="text-[11px] font-medium text-stone-500">{title}</p>
-      <pre className="mt-1 max-h-48 overflow-auto rounded-lg border border-stone-200 bg-white p-2 font-mono text-[11px] leading-relaxed text-stone-700">
+      <pre className="mt-1 max-h-48 overflow-auto rounded-lg border border-stone-200 bg-white p-2 font-mono text-[11px] leading-relaxed text-stone-700 max-[599px]:whitespace-pre-wrap max-[599px]:break-all">
         {body && body.trim() ? prettyJsonOrText(body) : "（空）"}
       </pre>
     </div>
@@ -2872,7 +2872,13 @@ export function AccountsScreen({
   const officialImportRule = activeCapability?.operations.official_import;
   const officialQuotaRule = activeCapability?.operations.official_quota;
   const modelTestRule = activeCapability?.operations.model_test;
-  const configWriteEnabled = capabilityReady && operationEnabled(configWriteRule);
+  // A phone has no CLI config file to write, and the write stops at
+  // `resolve_home_dir` — the one directory an Android app process does not have — so
+  // the feature is absent there rather than present-and-always-failing. `desktop`
+  // cannot stand in for this: it is also false in a browser, where writing does work.
+  const configWriteAvailable = !isMobileApp();
+  const configWriteEnabled =
+    capabilityReady && operationEnabled(configWriteRule) && configWriteAvailable;
   const officialImportEnabled = capabilityReady && operationEnabled(officialImportRule);
   const officialQuotaEnabled = capabilityReady && operationEnabled(officialQuotaRule);
   const modelTestEnabled = capabilityReady && operationEnabled(modelTestRule);
@@ -6029,39 +6035,43 @@ export function AccountsScreen({
                   <Play aria-hidden="true" className="h-3.5 w-3.5 fill-current" />
                 </button>
               )}
-              <button
-                aria-label="写入路由配置文件"
-                className={`relative grid h-6 w-6 place-items-center border bg-white motion-control hover:bg-stone-200 disabled:opacity-50 ${
-                  configWriteStale
-                    ? "border-amber-400 text-amber-700"
-                    : "border-stone-300 text-stone-700"
-                }`}
-                // Platforms without a native config write still open the dialog:
-                // it is where the endpoint parameters for hand-configured clients
-                // live, and the write itself stays gated inside it.
-                disabled={!routeServiceReady || writeConfigsMutation.isPending}
-                onClick={() => setConfigWriteDialogOpen(true)}
-                title={
-                  !configWriteEnabled
-                    ? configWriteReason + "可在弹窗里复制端点参数手动配置。"
-                    : configWriteStale
-                      ? "配置已变更，需重新写入才会生效"
-                      : "对接客户端：把当前算力池写入客户端配置"
-                }
-                type="button"
-              >
-                <Plug aria-hidden="true" className="h-3.5 w-3.5" />
-                {configWriteStale ? (
-                  <span
-                    aria-hidden="true"
-                    className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-amber-500"
-                  />
-                ) : null}
-              </button>
-              {configWriteStale ? (
-                <span className="shrink-0 text-[11px] font-semibold text-amber-700">
-                  配置已变更，需重新写入
-                </span>
+              {configWriteAvailable ? (
+                <>
+                  <button
+                    aria-label="写入路由配置文件"
+                    className={`relative grid h-6 w-6 place-items-center border bg-white motion-control hover:bg-stone-200 disabled:opacity-50 ${
+                      configWriteStale
+                        ? "border-amber-400 text-amber-700"
+                        : "border-stone-300 text-stone-700"
+                    }`}
+                    // Platforms without a native config write still open the dialog:
+                    // it is where the endpoint parameters for hand-configured clients
+                    // live, and the write itself stays gated inside it.
+                    disabled={!routeServiceReady || writeConfigsMutation.isPending}
+                    onClick={() => setConfigWriteDialogOpen(true)}
+                    title={
+                      !configWriteEnabled
+                        ? configWriteReason + "可在弹窗里复制端点参数手动配置。"
+                        : configWriteStale
+                          ? "配置已变更，需重新写入才会生效"
+                          : "对接客户端：把当前算力池写入客户端配置"
+                    }
+                    type="button"
+                  >
+                    <Plug aria-hidden="true" className="h-3.5 w-3.5" />
+                    {configWriteStale ? (
+                      <span
+                        aria-hidden="true"
+                        className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-amber-500"
+                      />
+                    ) : null}
+                  </button>
+                  {configWriteStale ? (
+                    <span className="shrink-0 text-[11px] font-semibold text-amber-700">
+                      配置已变更，需重新写入
+                    </span>
+                  ) : null}
+                </>
               ) : null}
               {activePlatform === "claude" ? (
                 <button
@@ -8184,7 +8194,7 @@ export function AccountsScreen({
       )}
 
       {liveLogOpen && (
-        <div className="motion-overlay motion-overlay-inset fixed z-50 grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
+        <div className="motion-overlay motion-overlay-inset fixed z-50 grid place-items-center overflow-auto bg-stone-950/35 p-4 backdrop-blur-sm"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setLiveLogOpen(false);
@@ -8193,7 +8203,13 @@ export function AccountsScreen({
         >
           <div
             aria-label="实时日志弹窗"
-            className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-2xl border border-stone-200 bg-white p-4 shadow-2xl"
+            // Capped against the overlay rather than the viewport. The overlay is
+            // already inset by the system bars, so an `85vh` dialog can come out
+            // taller than the box that centres it — and then the header, close button
+            // included, sits above the top of the screen and cannot be tapped. The
+            // overlay scrolls as well, so a `max-h-full` that resolved to `none`
+            // would still leave the button reachable rather than stranded.
+            className="flex max-h-full min-h-0 w-full max-w-3xl flex-col rounded-2xl border border-stone-200 bg-white p-4 shadow-2xl"
             role="dialog"
           >
             <div className="flex items-start justify-between gap-4">
@@ -8212,7 +8228,7 @@ export function AccountsScreen({
                 </button>
               </div>
             </div>
-            <div className="mt-3 flex-1 overflow-auto rounded-lg border border-stone-200">
+            <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-stone-200">
               {liveLogEntries.length === 0 ? (
                 <p className="p-6 text-center text-[12px] text-stone-400">
                   暂无请求。通过算力池发起一次请求后会实时出现在这里。

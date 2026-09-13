@@ -1349,6 +1349,70 @@ describe("AccountsScreen", () => {
     expect(within(dialog).queryByText("should-not-show")).not.toBeInTheDocument();
   });
 
+  it("reaches the live log from the pool strip on mobile", async () => {
+    // The same walk as above, on a phone. The test menu is the one toolbar the narrow
+    // layout keeps, so this is the only way in on a device — and a change that hid the
+    // strip, or gated the menu on `isDesktop`, would take the log away without
+    // touching the desktop test.
+    const originalUserAgent = window.navigator.userAgent;
+    Object.defineProperty(window.navigator, "userAgent", {
+      configurable: true,
+      value:
+        "Mozilla/5.0 (Linux; Android 15; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0 Mobile Safari/537.36",
+    });
+
+    try {
+      renderScreen("codex", "in_pool");
+
+      await userEvent.click(await screen.findByLabelText("打开算力池测试菜单"));
+      await userEvent.click(await screen.findByRole("menuitem", { name: "实时日志" }));
+
+      const dialog = await screen.findByRole("dialog", { name: "实时日志弹窗" });
+      expect(within(dialog).getByText("实时日志")).toBeInTheDocument();
+
+      // The reported failure was this button being unreachable, which left the phone
+      // with a modal it could not dismiss. jsdom cannot see layout, so closing is all
+      // this can prove — that the panel is sized against the overlay rather than the
+      // viewport is a `max-h-full` and a harness/device question.
+      await userEvent.click(within(dialog).getByLabelText("关闭"));
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog", { name: "实时日志弹窗" })).not.toBeInTheDocument(),
+      );
+    } finally {
+      Object.defineProperty(window.navigator, "userAgent", {
+        configurable: true,
+        value: originalUserAgent,
+      });
+    }
+  });
+
+  it("leaves the config write out of the mobile toolbar", async () => {
+    // A phone has no CLI config file to write, and the write stops at
+    // `resolve_home_dir`, which an Android app process does not have. Absent beats
+    // present-and-always-failing.
+    const originalUserAgent = window.navigator.userAgent;
+    Object.defineProperty(window.navigator, "userAgent", {
+      configurable: true,
+      value:
+        "Mozilla/5.0 (Linux; Android 15; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/130.0 Mobile Safari/537.36",
+    });
+
+    try {
+      renderScreen("codex", "in_pool");
+
+      await screen.findByTestId("pool-status-strip");
+      expect(screen.queryByLabelText("写入路由配置文件")).not.toBeInTheDocument();
+      // One button leaves, not the row: its neighbours are still there.
+      expect(screen.getByLabelText("打开算力池测试菜单")).toBeInTheDocument();
+      expect(screen.getByLabelText("启用算力池路由接入")).toBeInTheDocument();
+    } finally {
+      Object.defineProperty(window.navigator, "userAgent", {
+        configurable: true,
+        value: originalUserAgent,
+      });
+    }
+  });
+
   it("explains that the route proxy must run before viewing pool models", async () => {
     renderScreen("codex", "in_pool");
 
