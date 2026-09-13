@@ -326,3 +326,16 @@ jobs:
           name: ai-switch-android-aarch64
           path: ai-switch-android-aarch64.apk
           if-no-files-found: error
+
+      # Everything else in the mobile work lands in this project: the foreground
+      # service and its notification, the overlay permission, the boot receiver,
+      # and the plugin registration. It can only be produced by the Tauri CLI,
+      # which needs an Android toolchain this machine does not have — so the build
+      # that generates it also hands it back, and it gets committed from there.
+      - name: Upload the generated Android project
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-project
+          path: src-tauri/gen/android
+          if-no-files-found: error
+          include-hidden-files: true
