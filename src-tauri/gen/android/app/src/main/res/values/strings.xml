@@ -1,4 +1,12 @@
 <resources>
     <string name="app_name">"AI Switch"</string>
     <string name="main_activity_title">"AI Switch"</string>
+
+    <!-- Foreground service. The compute pool has to answer while the app is in the
+         background, and Android only permits that with a notification the user can
+         see — so these strings are the price of being allowed to keep running. -->
+    <string name="compute_pool_channel_name">"算力池"</string>
+    <string name="compute_pool_channel_description">"保持算力池在后台可用"</string>
+    <string name="compute_pool_notification_title">"算力池保持运行中"</string>
+    <string name="compute_pool_notification_body">"同机应用可通过 127.0.0.1:19527 接入"</string>
 </resources>

@@ -2,6 +2,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- The compute pool has to keep answering while the app is in the background,
+         and a foreground service is the only way Android allows a process to say
+         that. `specialUse` rather than `dataSync`: Android 15 caps how long a
+         dataSync service may run per day, which is the opposite of what a
+         long-lived local gateway needs. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Android 13 and up hide notifications without this, which would leave the
+         service running with nothing to show the user. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- AndroidTV support -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
@@ -23,6 +34,18 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".ComputePoolService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <!-- Required by the platform whenever `specialUse` is declared. It is
+                 what a Play reviewer would read; this app is sideloaded, but the
+                 declaration has to be valid either way. -->
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the local AI gateway reachable while the app is in the background." />
+        </service>
 
         <provider
           android:name="androidx.core.content.FileProvider"
