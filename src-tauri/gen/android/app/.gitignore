@@ -1,0 +1,11 @@
+/src/main/**/generated
+/src/main/jniLibs/**/*.so
+/src/main/assets/tauri.conf.json
+/tauri.build.gradle.kts
+/proguard-tauri.pro
+/tauri.properties
+# Copied in by the build from `dist/` and `src-tauri/resources/`, exactly like
+# `assets/tauri.conf.json` above. Committing them would put a stale copy of the
+# front end in the repository and churn megabytes on every frontend change.
+/src/main/assets/web
+/src/main/assets/skill-packages
