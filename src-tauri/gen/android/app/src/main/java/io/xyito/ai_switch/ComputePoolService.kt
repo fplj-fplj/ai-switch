@@ -8,27 +8,63 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import java.io.IOException
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.ServerSocket
 
 /**
- * Keeps this process alive while the compute pool is supposed to be reachable.
+ * Keeps this process alive while the compute pool is actually reachable.
  *
  * A local gateway is only worth anything if it still answers while the app is in
- * the background, and a foreground service is the only way Android lets an app
- * say "this process is doing something the user asked for". The notification is
- * not a side effect of that — it is the condition, and it doubles as the honest
- * indicator that the pool is up.
+ * the background, and a foreground service is the only way Android lets an app say
+ * "this process is doing something the user asked for". The notification is not a
+ * side effect of that — it is the condition, and it doubles as the honest indicator
+ * that the pool is up.
  *
- * Note what this is *not*: it does not make the process unkillable. Aggressive
- * ROMs still freeze or reap background apps, which is what the per-vendor
- * guidance exists for. This gets the process the priority it is entitled to.
+ * It follows the pool by **probing for the listener** rather than by being told.
+ * That is deliberate: the question this service answers is "is the pool reachable
+ * right now", and a listening socket is the direct evidence of it, where a flag
+ * pushed across a language boundary is a claim about it. It also means no bridge
+ * from Rust to Kotlin, and no way for the two to disagree.
+ *
+ * Note what this is *not*: it does not make the process unkillable. Aggressive ROMs
+ * still freeze or reap background apps, which is what the per-vendor guidance is
+ * for. This gets the process the priority it is entitled to.
  */
 class ComputePoolService : Service() {
+  private val handler = Handler(Looper.getMainLooper())
+  private var consecutiveMisses = 0
+
+  private val watchdog = object : Runnable {
+    override fun run() {
+      if (poolIsListening()) {
+        consecutiveMisses = 0
+      } else {
+        consecutiveMisses += 1
+        if (consecutiveMisses >= MISSES_BEFORE_STOP) {
+          // The pool never came up, or it has been stopped. Either way there is
+          // nothing left to keep alive, and a notification for a gateway that is
+          // not running is just a lie the user cannot dismiss.
+          stopSelf()
+          return
+        }
+      }
+      handler.postDelayed(this, PROBE_INTERVAL_MS)
+    }
+  }
+
   override fun onBind(intent: Intent?): IBinder? = null
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     ensureChannel()
     startForeground(NOTIFICATION_ID, buildNotification())
+    consecutiveMisses = 0
+    handler.removeCallbacks(watchdog)
+    handler.postDelayed(watchdog, PROBE_INTERVAL_MS)
     // Not sticky. "Start it when I need it and put it away after" is how this app
     // is meant to be used, so a process the system had to kill is not brought back
     // behind the user's back.
@@ -42,6 +78,29 @@ class ComputePoolService : Service() {
   override fun onTaskRemoved(rootIntent: Intent?) {
     stopSelf()
     super.onTaskRemoved(rootIntent)
+  }
+
+  override fun onDestroy() {
+    handler.removeCallbacks(watchdog)
+    super.onDestroy()
+  }
+
+  /**
+   * Whether something is already listening on one of the pool's ports.
+   *
+   * Asks by trying to bind rather than by connecting: a failed bind is exactly
+   * "something is already there", and unlike a probe connection it does not show up
+   * in the pool's own request log as an aborted request every fifteen seconds.
+   */
+  private fun poolIsListening(): Boolean = POOL_PORTS.any { port ->
+    try {
+      ServerSocket().use {
+        it.bind(InetSocketAddress(InetAddress.getLoopbackAddress(), port))
+      }
+      false
+    } catch (_: IOException) {
+      true
+    }
   }
 
   private fun ensureChannel() {
@@ -98,6 +157,23 @@ class ComputePoolService : Service() {
   companion object {
     private const val CHANNEL_ID = "compute-pool"
     private const val NOTIFICATION_ID = 1
+    private const val PROBE_INTERVAL_MS = 15_000L
+
+    /**
+     * ~2 minutes of a pool that is not there before giving up. Long on purpose: the
+     * gap between opening the app and starting the gateway is time the user spends
+     * configuring it, and a notification that vanished during that would be worse
+     * than one that lingers a minute after the pool stops.
+     */
+    private const val MISSES_BEFORE_STOP = 8
+
+    /**
+     * The ports this build can be listening on. 19527 is the release default and
+     * 10086 the dev one. A user-chosen port is not covered — the probe would decide
+     * the pool is down and stop keeping it alive. Worth fixing when the settings
+     * live somewhere Kotlin can read without duplicating the path knowledge.
+     */
+    private val POOL_PORTS = intArrayOf(19527, 10086)
 
     fun start(context: Context) {
       val intent = Intent(context, ComputePoolService::class.java)
