@@ -1170,11 +1170,11 @@ pub async fn dispatch_command(
                 .map_err(to_error)?,
         ),
         "save_web_service_config" => {
-            #[cfg(not(feature = "desktop"))]
+            #[cfg(not(any(feature = "desktop", feature = "mobile")))]
             {
                 Err(standalone_web_listener_managed())
             }
-            #[cfg(feature = "desktop")]
+            #[cfg(any(feature = "desktop", feature = "mobile"))]
             {
                 let config: WebServiceConfig = parse_arg(&args, "config")?;
                 let saved = WebService::save_config_and_reconcile(&state, &config)
@@ -1190,21 +1190,21 @@ pub async fn dispatch_command(
             to_value(WebService::status(&state.web_service, &config).await)
         }
         "start_web_server" => {
-            #[cfg(not(feature = "desktop"))]
+            #[cfg(not(any(feature = "desktop", feature = "mobile")))]
             {
                 Err(standalone_web_listener_managed())
             }
-            #[cfg(feature = "desktop")]
+            #[cfg(any(feature = "desktop", feature = "mobile"))]
             {
                 to_value(WebService::start(Arc::clone(&state)).await?)
             }
         }
         "stop_web_server" => {
-            #[cfg(not(feature = "desktop"))]
+            #[cfg(not(any(feature = "desktop", feature = "mobile")))]
             {
                 Err(standalone_web_listener_managed())
             }
-            #[cfg(feature = "desktop")]
+            #[cfg(any(feature = "desktop", feature = "mobile"))]
             {
                 to_value(WebService::stop(state.as_ref()).await)
             }
@@ -1288,7 +1288,7 @@ fn to_error(error: AppError) -> ApiError {
     ApiError::from(error)
 }
 
-#[cfg(not(feature = "desktop"))]
+#[cfg(not(any(feature = "desktop", feature = "mobile")))]
 fn standalone_web_listener_managed() -> ApiError {
     to_error(AppError::Validation {
         code: "web_service.standalone_managed",
@@ -1494,7 +1494,10 @@ mod tests {
         }
     }
 
-    #[cfg(not(feature = "desktop"))]
+    // The standalone server is the configuration where the listener really is
+    // managed from outside, so this stays true there — and only there. A desktop or
+    // mobile build owns its listener and now serves these commands.
+    #[cfg(not(any(feature = "desktop", feature = "mobile")))]
     #[tokio::test]
     async fn standalone_rejects_web_listener_configuration_and_lifecycle_commands() {
         let test = test_state().await;
