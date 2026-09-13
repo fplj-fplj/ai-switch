@@ -121,7 +121,7 @@ export function AutoUpdatePrompt() {
   return update ? (
         <motion.div
           key="auto-update-prompt"
-          className="fixed inset-0 z-[100] grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
+          className="motion-overlay-inset fixed z-[100] grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

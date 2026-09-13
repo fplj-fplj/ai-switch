@@ -312,7 +312,7 @@ export function RouteCredentialExportDialog({
 
   return (
     <div
-      className="motion-overlay fixed inset-0 z-[80] flex items-center justify-center bg-stone-950/45 p-4"
+      className="motion-overlay motion-overlay-inset fixed z-[80] flex items-center justify-center bg-stone-950/45 p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           handleClose();

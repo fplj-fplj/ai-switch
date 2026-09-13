@@ -109,7 +109,7 @@ export function MotionOverlay({
     <AnimatePresence>
       {open ? (
         <motion.div
-          className={`motion-overlay motion-runtime-overlay fixed inset-0 z-[80] grid ${placementClassName} bg-stone-950/35 p-4 backdrop-blur-sm`}
+          className={`motion-overlay motion-runtime-overlay motion-overlay-inset fixed z-[80] grid ${placementClassName} bg-stone-950/35 p-4 backdrop-blur-sm`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

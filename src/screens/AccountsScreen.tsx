@@ -7836,7 +7836,7 @@ export function AccountsScreen({
 
       {groupDialog && (
         <div
-          className="motion-overlay fixed inset-0 z-[80] grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
+          className="motion-overlay motion-overlay-inset fixed z-[80] grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget && !groupCreateMutation.isPending && !groupUpdateMutation.isPending) {
               setGroupDialog(null);
@@ -7924,7 +7924,7 @@ export function AccountsScreen({
       )}
 
       {pendingDelete && (
-        <div className="motion-overlay fixed inset-0 z-[80] grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
+        <div className="motion-overlay motion-overlay-inset fixed z-[80] grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget && !deleteMutation.isPending && !batchDeleteMutation.isPending) {
               setPendingDelete(null);
@@ -7974,7 +7974,7 @@ export function AccountsScreen({
       )}
 
       {clientConfigOpen && (
-        <div className="motion-overlay fixed inset-0 z-50 grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
+        <div className="motion-overlay motion-overlay-inset fixed z-50 grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setClientConfigOpen(false);
@@ -8047,7 +8047,7 @@ export function AccountsScreen({
       )}
 
       {modelTestDialogOpen && (
-        <div className="motion-overlay fixed inset-0 z-50 grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
+        <div className="motion-overlay motion-overlay-inset fixed z-50 grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setModelTestDialogOpen(false);
@@ -8184,7 +8184,7 @@ export function AccountsScreen({
       )}
 
       {liveLogOpen && (
-        <div className="motion-overlay fixed inset-0 z-50 grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
+        <div className="motion-overlay motion-overlay-inset fixed z-50 grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setLiveLogOpen(false);
@@ -8297,7 +8297,7 @@ export function AccountsScreen({
         </div>
       )}
       {routePoolModelsDialogOpen && (
-        <div className="motion-overlay fixed inset-0 z-50 grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
+        <div className="motion-overlay motion-overlay-inset fixed z-50 grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setRoutePoolModelsDialogOpen(false);
@@ -8615,7 +8615,7 @@ export function AccountsScreen({
       ) : null}
 
       {createOpen && (
-        <div className="motion-overlay fixed inset-0 z-50 grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
+        <div className="motion-overlay motion-overlay-inset fixed z-50 grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setCreateOpen(false);
@@ -9102,7 +9102,7 @@ export function AccountsScreen({
       )}
 
       {editingCredential && (
-        <div className="motion-overlay fixed inset-0 z-50 flex justify-end bg-stone-950/28 backdrop-blur-sm"
+        <div className="motion-overlay motion-overlay-inset fixed z-50 flex justify-end bg-stone-950/28 backdrop-blur-sm"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setEditingCredential(null);

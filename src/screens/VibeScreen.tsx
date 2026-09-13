@@ -3095,7 +3095,7 @@ export function VibeScreen({ onExitVibe }: VibeScreenProps) {
       <AnimatePresence initial={false}>
         {appearanceOpen ? (
         <motion.div
-          className="motion-runtime-overlay fixed inset-0 z-50 grid place-items-center bg-black/45 p-4"
+          className="motion-runtime-overlay motion-overlay-inset fixed z-50 grid place-items-center bg-black/45 p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={isJSDOM ? undefined : { opacity: 0 }}
@@ -3263,7 +3263,7 @@ export function VibeScreen({ onExitVibe }: VibeScreenProps) {
       <AnimatePresence initial={false}>
         {tabSettingsOpen ? (
         <motion.div
-          className="motion-runtime-overlay fixed inset-0 z-50 grid place-items-center bg-black/45 p-4"
+          className="motion-runtime-overlay motion-overlay-inset fixed z-50 grid place-items-center bg-black/45 p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -3376,7 +3376,7 @@ export function VibeScreen({ onExitVibe }: VibeScreenProps) {
       <AnimatePresence initial={false}>
         {createDialogOpen ? (
         <motion.div
-          className="motion-runtime-overlay fixed inset-0 z-50 grid place-items-center bg-black/55 p-4"
+          className="motion-runtime-overlay motion-overlay-inset fixed z-50 grid place-items-center bg-black/55 p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

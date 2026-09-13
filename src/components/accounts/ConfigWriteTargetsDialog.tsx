@@ -379,7 +379,7 @@ export function ConfigWriteTargetsDialog({
 
   return (
     <div
-      className="motion-overlay fixed inset-0 z-[80] flex items-center justify-center bg-stone-950/45 p-4 backdrop-blur-sm"
+      className="motion-overlay motion-overlay-inset fixed z-[80] flex items-center justify-center bg-stone-950/45 p-4 backdrop-blur-sm"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !loading) {
           onClose();

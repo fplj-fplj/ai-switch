@@ -3425,6 +3425,22 @@ summary:focus-visible {
   animation: motion-backdrop-enter var(--motion-duration-surface) var(--motion-ease-standard) both;
 }
 
+/* Modals are `fixed`, so — like `.app-sidebar-drawer` above — they are laid out
+   against the viewport and do not inherit `#root`'s safe-area padding. They were
+   also `inset-0`, so they spanned the strips under the status bar and the
+   navigation bar and centred their dialog against that inflated box. On a phone
+   that put a dialog's own header buttons, its close button included, under the
+   system bars: untappable, and because the overlay is modal, the app had no way
+   out of it.
+
+   The insets replace `inset-0` rather than overriding it. Two classes setting the
+   same property on one element resolve by stylesheet order, not by the order they
+   appear in the class attribute — which is how a `hidden` once lost to a `flex`. */
+.motion-overlay-inset {
+  inset: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
 .app-sidebar-drawer,
 .vibe-session-drawer {
   animation: motion-drawer-enter var(--motion-duration-surface) var(--motion-ease-standard) both;
