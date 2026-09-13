@@ -281,21 +281,42 @@ jobs:
       # throwaway self-signed key is enough to sideload for testing, and it keeps
       # the workflow free of repository secrets. zipalign must precede signing —
       # it rewrites the archive and would invalidate a signature applied first.
+      # Signed with the repository's release key when it is configured, so an
+      # upgrade installs over the previous build instead of demanding an uninstall
+      # first. Secrets rather than a committed keystore: the key is the app's
+      # identity, and anyone holding it can publish an update your device accepts.
+      # A fork without the secrets still builds — it just falls back to a throwaway
+      # key, which is also what every build here used to do.
       - name: Sign the APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
           build_tools="$(ls -d "${ANDROID_SDK_ROOT}"/build-tools/* | sort -V | tail -1)"
           unsigned="$(find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | head -1)"
           [ -n "$unsigned" ] || { echo "::error::the build produced no APK"; exit 1; }
 
-          keytool -genkeypair -v -keystore /tmp/release.keystore -alias ai-switch \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass android -keypass android \
-            -dname "CN=AI Switch Android, O=AI Switch, C=US"
+          if [ -n "${KEYSTORE_BASE64}" ]; then
+            echo "Signing with the repository release key."
+            printf '%s' "${KEYSTORE_BASE64}" | base64 -d > /tmp/release.keystore
+            ks_args=(--ks /tmp/release.keystore
+                     --ks-pass "pass:${KEYSTORE_PASSWORD}"
+                     --key-pass "pass:${KEY_PASSWORD}"
+                     --ks-key-alias "${KEY_ALIAS}")
+          else
+            echo "::warning::ANDROID_KEYSTORE_BASE64 is not set; signing with a throwaway key, so this APK cannot be installed over a previous one."
+            keytool -genkeypair -v -keystore /tmp/release.keystore -alias ai-switch \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass android -keypass android \
+              -dname "CN=AI Switch Android, O=AI Switch, C=US"
+            ks_args=(--ks /tmp/release.keystore --ks-pass pass:android --key-pass pass:android)
+          fi
 
           "$build_tools/zipalign" -f 4 "$unsigned" /tmp/aligned.apk
-          "$build_tools/apksigner" sign \
-            --ks /tmp/release.keystore --ks-pass pass:android --key-pass pass:android \
+          "$build_tools/apksigner" sign "${ks_args[@]}" \
             --out ai-switch-android-aarch64.apk /tmp/aligned.apk
           "$build_tools/apksigner" verify --print-certs ai-switch-android-aarch64.apk
 
