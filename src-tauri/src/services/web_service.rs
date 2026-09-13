@@ -54,6 +54,16 @@ pub struct WebServiceConfig {
     pub tls_cert_path: Option<String>,
     #[serde(default)]
     pub tls_key_path: Option<String>,
+    /// Explicit permission to bind a non-loopback, plaintext listener.
+    ///
+    /// Off by default. Together with a non-loopback `host` it publishes the pool
+    /// to every device on the same network, guarded by the pool key alone and
+    /// readable by anyone who can see the traffic — so the panel only sets it from
+    /// a confirmed switch that says so. Kept separate from `host` on purpose: the
+    /// two together mean "bind there, and I meant it", and either one alone is
+    /// inert rather than half-applied.
+    #[serde(default)]
+    pub allow_lan_access: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -693,6 +703,7 @@ impl WebService {
             tls_enabled: config.tls_enabled,
             tls_cert_path,
             tls_key_path,
+            allow_lan_access: config.allow_lan_access,
         }
     }
 }
@@ -712,6 +723,7 @@ impl Default for WebServiceConfig {
             tls_enabled: false,
             tls_cert_path: None,
             tls_key_path: None,
+            allow_lan_access: false,
         }
     }
 }
@@ -769,7 +781,7 @@ fn validate_start_config(
     config: &WebServiceConfig,
 ) -> Result<Option<(PathBuf, PathBuf)>, AppError> {
     let tls_paths = validate_enabled_tls_paths(config)?;
-    validate_sensitive_web_transport(&config.host, config.tls_enabled)?;
+    validate_sensitive_web_transport(&config.host, config.tls_enabled, config.allow_lan_access)?;
     // The default config generates a UUID token, so this only bites a
     // hand-blanked web-service.json — where the alternative is a server that
     // answers 401 to everything without saying why.

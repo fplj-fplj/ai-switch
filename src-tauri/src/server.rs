@@ -87,14 +87,27 @@ pub fn validate_server_transport(
     })
 }
 
-pub fn validate_sensitive_web_transport(host: &str, tls_enabled: bool) -> Result<(), AppError> {
-    if tls_enabled || is_loopback_host(host) {
+/// Rejects a non-loopback plaintext listener unless something explicitly permits
+/// it.
+///
+/// `allow_lan_access` is the deliberate opt-in: a confirm-gated switch in the
+/// panel that publishes the pool to every device on the same network, guarded by
+/// the pool key alone and readable by anyone who can see the traffic. Off
+/// everywhere by default, and the switch that sets it says all of that out loud.
+/// It exists as a parameter rather than a check at the call site so that the
+/// exception lives with the rule it bends, where it can be tested.
+pub fn validate_sensitive_web_transport(
+    host: &str,
+    tls_enabled: bool,
+    allow_lan_access: bool,
+) -> Result<(), AppError> {
+    if tls_enabled || is_loopback_host(host) || allow_lan_access {
         return Ok(());
     }
 
     Err(AppError::Validation {
         code: "web.sensitive_transport_requires_tls",
-        message: "Sensitive Web commands require TLS on non-loopback listeners. Use a loopback host for HTTP, or enable TLS before binding to all interfaces".to_string(),
+        message: "Sensitive Web commands require TLS on non-loopback listeners. Use a loopback host for HTTP, enable TLS, or turn on LAN access in the Web Service settings — which exposes the pool to this network in cleartext.".to_string(),
         details: Some(host.trim().to_string()),
         recoverable: true,
     })
@@ -168,7 +181,7 @@ mod tests {
             "[::1]",
         ] {
             assert!(is_loopback_host(host), "expected loopback host: {host}");
-            validate_sensitive_web_transport(host, false).unwrap();
+            validate_sensitive_web_transport(host, false, false).unwrap();
         }
     }
 
@@ -181,7 +194,7 @@ mod tests {
             "localhost.example",
         ] {
             assert!(!is_loopback_host(host), "unexpected loopback host: {host}");
-            let error = validate_sensitive_web_transport(host, false).unwrap_err();
+            let error = validate_sensitive_web_transport(host, false, false).unwrap_err();
             assert!(matches!(
                 error,
                 crate::error::AppError::Validation {
@@ -194,7 +207,7 @@ mod tests {
 
     #[test]
     fn non_loopback_http_error_explains_the_safe_alternatives() {
-        let error = validate_sensitive_web_transport("0.0.0.0", false).unwrap_err();
+        let error = validate_sensitive_web_transport("0.0.0.0", false, false).unwrap_err();
         let (message, details) = match error {
             AppError::Validation {
                 message, details, ..
@@ -243,7 +256,20 @@ mod tests {
 
     #[test]
     fn configured_tls_allows_non_loopback_hosts() {
-        validate_sensitive_web_transport("0.0.0.0", true).unwrap();
+        validate_sensitive_web_transport("0.0.0.0", true, false).unwrap();
+    }
+
+    #[test]
+    fn the_lan_opt_in_allows_a_non_loopback_host() {
+        // The switch that sets this is confirm-gated in the panel and off by
+        // default; the guard's job is to make the exception explicit and testable
+        // rather than to be the only thing standing between the pool and the
+        // network it shares.
+        validate_sensitive_web_transport("0.0.0.0", false, true).unwrap();
+        validate_sensitive_web_transport("192.168.1.10", false, true).unwrap();
+
+        // ...and it does not leak back into a listener that did not ask for it.
+        assert!(validate_sensitive_web_transport("192.168.1.10", false, false).is_err());
     }
 
     #[test]
