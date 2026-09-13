@@ -27,6 +27,13 @@ const MOBILE_HIDDEN_SCREENS: ReadonlySet<string> = new Set([
   "Targets",
   // `imagegen_commands` is `#[cfg(feature = "desktop")]`.
   "ImageGen",
+  // The operation log lists config-write snapshots, and its data path goes through
+  // `ConfigWriteCoordinator::reconcile_prepared` → `resolve_home_dir` →
+  // `BaseDirs`, which has no `$HOME` to resolve in an Android app process and
+  // fails. Even with that worked around the screen would be permanently empty:
+  // there are no CLI config files on a phone to snapshot, which is why writing
+  // them is on this same list.
+  "Log",
 ]);
 
 /**

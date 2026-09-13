@@ -41,13 +41,23 @@ describe("screen availability", () => {
   });
 
   it("withholds the screens whose commands are absent from the mobile build", () => {
-    for (const screen of ["Vibe", "OCR", "MCP", "Skills", "Updates", "Sessions", "Targets", "ImageGen"]) {
+    for (const screen of [
+      "Vibe",
+      "OCR",
+      "MCP",
+      "Skills",
+      "Updates",
+      "Sessions",
+      "Targets",
+      "ImageGen",
+      "Log",
+    ]) {
       expect(isScreenAvailable(screen, true)).toBe(false);
     }
   });
 
   it("keeps the first-phase screens on mobile", () => {
-    for (const screen of ["Codex", "Claude", "Settings", "About", "Log", "SaaS"]) {
+    for (const screen of ["Codex", "Claude", "Settings", "About", "SaaS"]) {
       expect(isScreenAvailable(screen, true)).toBe(true);
     }
   });
