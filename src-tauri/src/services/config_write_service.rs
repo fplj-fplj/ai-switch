@@ -491,8 +491,22 @@ impl ConfigWriteCoordinator {
         pool: &SqlitePool,
         runtime: &ConfigWriteRuntimeState,
     ) -> Result<(), AppError> {
+        // The stuck rows are looked up before the home directory is resolved, and the
+        // usual answer — none — stops right there. `BaseDirs` finds no `$HOME` in an
+        // Android app process, and the home directory is only wanted to validate the
+        // path of a row that actually exists; asking for it first turned the read-only
+        // listing this shares a caller with (`list_config_snapshots`) into a failure
+        // over a directory it never needed. A phone is also not a place that can be
+        // missing a home directory *and* have leftovers from one: the config files
+        // this repairs live under it, so no write could have got far enough to leave
+        // a row behind.
+        let prepared =
+            ConfigSnapshotRepository::list_prepared_before(pool, &reconcile_cutoff()).await?;
+        if prepared.is_empty() {
+            return Ok(());
+        }
         let home = resolve_home_dir()?;
-        Self::reconcile_prepared_for_home(paths, pool, runtime, &home).await
+        Self::reconcile_prepared_rows(paths, pool, runtime, &home, prepared).await
     }
 
     pub(crate) async fn reconcile_prepared_for_home(
@@ -501,9 +515,20 @@ impl ConfigWriteCoordinator {
         runtime: &ConfigWriteRuntimeState,
         home: &Path,
     ) -> Result<(), AppError> {
-        let cutoff = (Utc::now() - Duration::minutes(5)).to_rfc3339();
+        let prepared =
+            ConfigSnapshotRepository::list_prepared_before(pool, &reconcile_cutoff()).await?;
+        Self::reconcile_prepared_rows(paths, pool, runtime, home, prepared).await
+    }
+
+    async fn reconcile_prepared_rows(
+        paths: &AppPaths,
+        pool: &SqlitePool,
+        runtime: &ConfigWriteRuntimeState,
+        home: &Path,
+        prepared: Vec<ConfigSnapshotRecord>,
+    ) -> Result<(), AppError> {
         let path_context = route_config_path_context(paths).await?;
-        for snapshot in ConfigSnapshotRepository::list_prepared_before(pool, &cutoff).await? {
+        for snapshot in prepared {
             let authorization = validate_reconciliation_target(pool, &snapshot).await;
             let (target, path) = match authorization {
                 Ok((target, adapter)) => {
@@ -940,6 +965,14 @@ pub(crate) async fn route_config_path_context(
     Ok(RouteConfigPathContext {
         deepseek_harness_config_path: Some(path),
     })
+}
+
+/// The age at which a `prepared` row is read as abandoned rather than in flight.
+///
+/// Named because two entry points now need it, and a disagreement between them about
+/// what "stuck" means would be a bug that only shows up on a device that crashed.
+fn reconcile_cutoff() -> String {
+    (Utc::now() - Duration::minutes(5)).to_rfc3339()
 }
 
 fn resolve_home_dir() -> Result<PathBuf, AppError> {
