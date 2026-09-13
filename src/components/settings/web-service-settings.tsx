@@ -12,6 +12,7 @@ import {
 import type { WebServiceConfig } from "../../lib/api/types";
 import { useI18n } from "../../lib/i18n";
 import { isDesktopApp, isMobileApp } from "../../lib/platform";
+import { getLocalAddresses, type LocalAddresses } from "../../lib/poolRuntime";
 import { TokenInput } from "../auth/TokenInput";
 import { TailscaleSettings } from "./tailscale-settings";
 
@@ -69,6 +70,25 @@ export function WebServiceSettings() {
   // Set while the LAN switch is being confirmed: flipping it on asks first, so the
   // checkbox reads from the config and this only gates the warning block.
   const [lanAccessPending, setLanAccessPending] = useState(false);
+
+  // The addresses only the Android side can report. Fetched once: they change when
+  // the network does, and re-reading on every render would be a battery cost for a
+  // label nobody watches.
+  const [addresses, setAddresses] = useState<LocalAddresses | null>(null);
+  useEffect(() => {
+    if (!isMobileApp()) {
+      return;
+    }
+    let active = true;
+    void getLocalAddresses().then((next) => {
+      if (active) {
+        setAddresses(next);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
   const configQuery = useQuery({
     queryKey: ["web-service-config"],
     queryFn: getWebServiceConfig,
@@ -274,6 +294,20 @@ export function WebServiceSettings() {
                 {form.allowLanAccess === true ? (
                   <p className="max-w-xl rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
                     {t("settings.webService.lanAccessOn")}
+                  </p>
+                ) : null}
+                {addresses ? (
+                  <p className="max-w-xl rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[12px] font-medium text-stone-600">
+                    {t("settings.webService.addressLoopback", {
+                      host: addresses.loopback,
+                      port: String(form.port),
+                    })}
+                    {form.allowLanAccess === true && addresses.lan
+                      ? ` · ${t("settings.webService.addressLan", {
+                          host: addresses.lan,
+                          port: String(form.port),
+                        })}`
+                      : null}
                   </p>
                 ) : null}
                 {httpTransportRequiresTls ? (

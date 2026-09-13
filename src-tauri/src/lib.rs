@@ -14,6 +14,11 @@ mod importers;
 mod mcp;
 mod models;
 mod paths;
+// The Android-side runtime plugin: addresses the webview cannot read, and the
+// settings screens that decide whether this process survives on a given ROM.
+// Registered from `mobile.rs`; a desktop build has nothing to register.
+#[cfg(feature = "mobile")]
+mod pool_runtime;
 mod saas;
 mod security;
 pub mod server;

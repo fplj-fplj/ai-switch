@@ -137,6 +137,9 @@ async fn bootstrap(app: tauri::AppHandle) -> Result<AppState, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // The panel reaches the device through this: addresses it cannot read from
+        // JavaScript, and the settings screens that keep the process alive.
+        .plugin(pool_runtime::init())
         .setup(|app| {
             let state = tauri::async_runtime::block_on(bootstrap(app.handle().clone()))
                 .map_err(|error| Box::new(std::io::Error::other(error)) as Box<dyn std::error::Error>)?;
