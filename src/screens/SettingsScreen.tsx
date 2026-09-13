@@ -15,6 +15,7 @@ import { normalizeLanguage, supportedLanguages, useI18n, type Language } from ".
 import { isDesktopApp, isMobileApp } from "../lib/platform";
 import { isScreenAvailable } from "../lib/screenAvailability";
 import { AutostartSettings } from "../components/settings/autostart-settings";
+import { KeepAliveSettings } from "../components/settings/keep-alive-settings";
 import { RouteProxyHttpsSettings } from "../components/settings/route-proxy-https-settings";
 import { NotificationSettings } from "../components/settings/notification-settings";
 import { WebServiceSettings } from "../components/settings/web-service-settings";
@@ -292,6 +293,8 @@ export function SettingsScreen({
           {t("settings.dataDir", { path: settings.data_dir })}
         </p>
         <AutostartSettings />
+        {/* Mobile only; renders nothing elsewhere. */}
+        <KeepAliveSettings />
         {/* The deep-link compat flag and close-to-tray both describe desktop
             machinery — `tauri-plugin-deep-link` and the tray are not linked into
             the APK, so on a phone they would be switches that do nothing. */}

@@ -39,3 +39,50 @@ export async function getLocalAddresses(): Promise<LocalAddresses | null> {
     return null;
   }
 }
+
+export type KeepAliveStatus = {
+  /** `Build.MANUFACTURER`, which is what the vendor table matches on. */
+  manufacturer: string;
+  /** `Build.BRAND`, reported because the two disagree on some devices. */
+  brand: string;
+  /** True when the system has excused this app from battery optimisation. */
+  ignoringBatteryOptimizations: boolean;
+};
+
+async function callPlugin<T>(command: string): Promise<T | null> {
+  if (!isMobileApp()) {
+    return null;
+  }
+
+  try {
+    return await getTransport().call<T>(`plugin:pool-runtime|${command}`);
+  } catch {
+    return null;
+  }
+}
+
+export function getKeepAliveStatus() {
+  return callPlugin<KeepAliveStatus>("getKeepAliveStatus");
+}
+
+/**
+ * Opens the system's "don't optimise this app" dialog, and reports whether one
+ * opened at all.
+ *
+ * `false` means the device has no such dialog to show, not that the user refused —
+ * the answer comes from the next `getKeepAliveStatus`, since the dialog is outside
+ * this app and reports nothing back.
+ */
+export async function requestIgnoreBatteryOptimizations(): Promise<boolean> {
+  const result = await callPlugin<{ opened: boolean }>("requestIgnoreBatteryOptimizations");
+  return result?.opened ?? false;
+}
+
+/**
+ * Opens the first keep-alive screen this ROM has, falling back to the app's own
+ * details page when none of the known ones exist. `false` means even that failed.
+ */
+export async function openVendorKeepAliveSettings(): Promise<boolean> {
+  const result = await callPlugin<{ opened: boolean }>("openVendorKeepAliveSettings");
+  return result?.opened ?? false;
+}
