@@ -217,7 +217,7 @@ mod tests {
 
         assert_eq!(
             message,
-            "Sensitive Web commands require TLS on non-loopback listeners. Use a loopback host for HTTP, or enable TLS before binding to all interfaces"
+            "Sensitive Web commands require TLS on non-loopback listeners. Use a loopback host for HTTP, enable TLS, or turn on LAN access in the Web Service settings — which exposes the pool to this network in cleartext."
         );
         assert_eq!(details.as_deref(), Some("0.0.0.0"));
     }
