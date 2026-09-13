@@ -11,10 +11,12 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import java.io.File
 import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
+import org.json.JSONObject
 
 /**
  * Keeps this process alive while the compute pool is actually reachable.
@@ -86,21 +88,54 @@ class ComputePoolService : Service() {
   }
 
   /**
-   * Whether something is already listening on one of the pool's ports.
+   * Whether something is already listening on the pool's port.
    *
    * Asks by trying to bind rather than by connecting: a failed bind is exactly
    * "something is already there", and unlike a probe connection it does not show up
    * in the pool's own request log as an aborted request every fifteen seconds.
+   *
+   * Binding the loopback address catches the LAN case too — a wildcard bind and a
+   * loopback bind on the same port conflict in both directions.
    */
-  private fun poolIsListening(): Boolean = POOL_PORTS.any { port ->
-    try {
-      ServerSocket().use {
-        it.bind(InetSocketAddress(InetAddress.getLoopbackAddress(), port))
-      }
-      false
-    } catch (_: IOException) {
-      true
+  private fun poolIsListening(): Boolean = try {
+    ServerSocket().use {
+      it.bind(InetSocketAddress(InetAddress.getLoopbackAddress(), poolPort()))
     }
+    false
+  } catch (_: IOException) {
+    true
+  }
+
+  /**
+   * The port the pool is configured to use, read from the same file the Rust side
+   * writes.
+   *
+   * Read rather than assumed: the port is a user setting, and a service watching
+   * the wrong one would decide the pool is down and stop keeping it alive — which is
+   * the one failure this service exists to prevent. Re-read on every probe, so a
+   * port change is picked up within one interval.
+   *
+   * The path is `/data/user/0/<package>/ai-switch/web-service.json`. That is worth
+   * spelling out because it is not where the documentation implies: Tauri's
+   * `app_data_dir()` has a doc comment saying it appends the bundle identifier, but
+   * the implementation just calls `getDataDir`, and `PathPlugin.getDataDir` returns
+   * `activity.dataDir`. The `ai-switch` segment comes from our own
+   * `AppPaths::from_data_dir` call in `mobile.rs`.
+   */
+  private fun poolPort(): Int {
+    for (relative in CONFIG_FILES) {
+      val file = File(dataDir, relative)
+      if (!file.isFile) {
+        continue
+      }
+      try {
+        return JSONObject(file.readText()).optInt("port", DEFAULT_PORT)
+      } catch (_: Exception) {
+        // Unreadable or not JSON yet — mid-write, or written by an older build.
+        // Fall through to the next candidate and then to the default.
+      }
+    }
+    return DEFAULT_PORT
   }
 
   private fun ensureChannel() {
@@ -168,12 +203,15 @@ class ComputePoolService : Service() {
     private const val MISSES_BEFORE_STOP = 8
 
     /**
-     * The ports this build can be listening on. 19527 is the release default and
-     * 10086 the dev one. A user-chosen port is not covered — the probe would decide
-     * the pool is down and stop keeping it alive. Worth fixing when the settings
-     * live somewhere Kotlin can read without duplicating the path knowledge.
+     * Where the pool's settings live, relative to the app's data directory. Both
+     * spellings are tried: release builds write `web-service.json`, debug builds
+     * `web-service-dev.json`.
      */
-    private val POOL_PORTS = intArrayOf(19527, 10086)
+    private val CONFIG_FILES =
+      listOf("ai-switch/web-service.json", "ai-switch/web-service-dev.json")
+
+    /** What the pool binds when nothing has configured it yet. */
+    private const val DEFAULT_PORT = 19527
 
     fun start(context: Context) {
       val intent = Intent(context, ComputePoolService::class.java)
