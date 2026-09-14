@@ -19,9 +19,27 @@
 
 const CRASH_KEY = "ai-switch.crash-log";
 const TRAIL_KEY = "ai-switch.action-trail";
+const HEARTBEAT_KEY = "ai-switch.heartbeat";
 /** How many are kept. Enough to see a pattern, few enough to read on a phone. */
 const MAX_CRASHES = 20;
 const MAX_TRAIL = 40;
+/**
+ * How often the page proves it is still running.
+ *
+ * The one question a blank screen raises and cannot answer on its own is whether the
+ * page was alive at the time. A stopped heartbeat with no error recorded says the
+ * renderer went away underneath JavaScript — which is a different investigation from
+ * a page that is up and rendering nothing. Five seconds is frequent enough to place
+ * the moment, rare enough not to be a cost.
+ */
+const HEARTBEAT_INTERVAL_MS = 5000;
+
+type Heartbeat = {
+  /** The last time the page proved it was running. */
+  at: string;
+  /** The last time it was told it was going away, or null if it never was. */
+  hiddenAt: string | null;
+};
 
 export type CrashEntry = {
   /** ISO 8601, so an entry from an earlier launch sorts against a later one. */
@@ -181,7 +199,6 @@ export function subscribeToCrashLog(listener: () => void): () => void {
 }
 
 const TRAIL_IGNORED = new Set(["HTML", "BODY", "MAIN", "DIV"]);
-
 function describeTarget(target: EventTarget | null): string | null {
   if (!(target instanceof Element)) {
     return null;
@@ -243,4 +260,106 @@ export function installCrashCapture() {
     },
     true,
   );
+}
+
+function readJson<T>(key: string): T | null {
+  const raw = storage()?.getItem(key);
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+function writeJson(key: string, value: unknown) {
+  try {
+    storage()?.setItem(key, JSON.stringify(value));
+  } catch {
+    // Same reasoning as `writeList`: losing the note is not worth a second failure.
+  }
+}
+
+/**
+ * Whether the previous run ended in a way that leaves no JavaScript behind.
+ *
+ * A page that stops checking in while it is in front of the user — without ever
+ * having been told it was going away — did not exit, it disappeared. A renderer the
+ * system took, or an app force-stopped: neither writes an error anywhere, which is
+ * the whole reason a blank screen cannot be accounted for from inside the page.
+ *
+ * Exported so it can be tested against a written heartbeat, not only through a real
+ * launch.
+ */
+export function assessPreviousRun(now = Date.now()): boolean {
+  const previous = readJson<Heartbeat>(HEARTBEAT_KEY);
+  if (!previous?.at) {
+    return false;
+  }
+  const stoppedAt = Date.parse(previous.at);
+  if (!Number.isFinite(stoppedAt)) {
+    return false;
+  }
+  const hiddenAt = previous.hiddenAt ? Date.parse(previous.hiddenAt) : Number.NaN;
+  // It said goodbye first — an ordinary trip to the background, an ordinary exit.
+  if (Number.isFinite(hiddenAt) && hiddenAt >= stoppedAt) {
+    return false;
+  }
+  // The last beat is this run's own, written a moment ago by a reload.
+  if (now - stoppedAt < HEARTBEAT_INTERVAL_MS) {
+    return false;
+  }
+
+  recordCrash(
+    "silent stop",
+    new Error(
+      `页面在前台运行时于 ${previous.at} 之后停止心跳，且没有记录到任何错误。` +
+        "这说明渲染进程可能是在 JavaScript 之外被系统终止的（也可能是应用被强制结束）。",
+    ),
+  );
+  return true;
+}
+
+/**
+ * Keeps the heartbeat going, and records when the page is told it is going away.
+ *
+ * Separate from `installCrashCapture` because it runs a timer, and the error capture
+ * is worth having on its own in a test.
+ */
+export function installSessionHeartbeat() {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return;
+  }
+
+  // Before the first beat overwrites it: this reads what the last run left behind.
+  assessPreviousRun();
+
+  // Beats are only written while the page is in front of the user, and hiding writes
+  // one last beat that names itself as the end. That is what makes the last beat
+  // readable: a page that hid and then stopped looks like an exit, and a page that
+  // stopped with a beat still claiming the foreground did not exit — it vanished.
+  // Beating in the background would erase the difference, since a hidden page keeps
+  // running and would go on claiming to be alive.
+  let hiddenAt: string | null = null;
+  const beat = () => {
+    if (document.visibilityState === "hidden") {
+      return;
+    }
+    const value: Heartbeat = { at: now(), hiddenAt };
+    writeJson(HEARTBEAT_KEY, value);
+  };
+  beat();
+  window.setInterval(beat, HEARTBEAT_INTERVAL_MS);
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      hiddenAt = now();
+      writeJson(HEARTBEAT_KEY, { at: hiddenAt, hiddenAt } satisfies Heartbeat);
+      return;
+    }
+    hiddenAt = null;
+    beat();
+  });
 }

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  assessPreviousRun,
   clearCrashes,
   installCrashCapture,
   readCrashes,
@@ -7,6 +8,13 @@ import {
   recordAction,
   recordCrash,
 } from "../../src/lib/crashLog";
+
+const HEARTBEAT_KEY = "ai-switch.heartbeat";
+
+/** Writes what a previous run would have left behind. */
+function writeHeartbeat(at: string, hiddenAt: string | null) {
+  window.localStorage.setItem(HEARTBEAT_KEY, JSON.stringify({ at, hiddenAt }));
+}
 
 describe("crash log", () => {
   beforeEach(() => {
@@ -84,6 +92,49 @@ describe("crash log", () => {
         Object.defineProperty(window, "localStorage", original);
       }
     }
+  });
+});
+
+describe("assessPreviousRun", () => {
+  beforeEach(() => {
+    clearCrashes();
+    window.localStorage.removeItem(HEARTBEAT_KEY);
+  });
+
+  it("says nothing when there is no previous run to judge", () => {
+    expect(assessPreviousRun()).toBe(false);
+    expect(readCrashes()).toHaveLength(0);
+  });
+
+  it("says nothing about a run that went to the background before it ended", () => {
+    // The ordinary case on a phone: the page hid, wrote the beat that says so, and
+    // whatever happened next happened to something that was no longer on screen.
+    writeHeartbeat("2026-09-14T10:00:00.000Z", "2026-09-14T10:00:00.000Z");
+
+    expect(assessPreviousRun(Date.parse("2026-09-14T11:00:00.000Z"))).toBe(false);
+    expect(readCrashes()).toHaveLength(0);
+  });
+
+  it("records a run that stopped while it was still in front of the user", () => {
+    // No goodbye, no error: the page simply stopped existing while visible. Nothing
+    // inside JavaScript can see this happen, which is the point of recording it.
+    writeHeartbeat("2026-09-14T10:00:00.000Z", null);
+
+    expect(assessPreviousRun(Date.parse("2026-09-14T11:00:00.000Z"))).toBe(true);
+    const [entry] = readCrashes();
+    expect(entry.source).toBe("silent stop");
+    expect(entry.message).toContain("2026-09-14T10:00:00.000Z");
+    expect(entry.message).toContain("没有记录到任何错误");
+  });
+
+  it("does not mistake a reload for a disappearance", () => {
+    // A reload leaves a beat from a moment ago. Calling that a crash would make this
+    // noise on every launch.
+    const justNow = new Date().toISOString();
+    writeHeartbeat(justNow, null);
+
+    expect(assessPreviousRun(Date.parse(justNow) + 1000)).toBe(false);
+    expect(readCrashes()).toHaveLength(0);
   });
 });
 
