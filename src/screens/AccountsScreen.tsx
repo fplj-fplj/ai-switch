@@ -1857,53 +1857,120 @@ function CodexMappingCapabilityFields({
 }
 
 /**
- * Picks one of the fetched upstream models into a mapping field.
+ * The phone's way into the fetched model list.
  *
- * The mapping inputs offer their suggestions through `<datalist>`, whose popup
- * the WebView draws itself. On Android that list appears but choosing from it
- * never commits to the controlled input, so the field stays empty and the mapping
- * cannot be filled at all — which is why this exists.
+ * It exists because `<datalist>`'s popup is drawn by the WebView and choosing from
+ * it never commits to the controlled input, so on Android the field stayed empty.
  *
- * A native `<select>` is drawn by the platform and does commit; the same
- * component already relies on one for the Claude request-model column. It carries
- * the same choices, only on the platform that needs it, so the desktop keeps the
- * inline suggestions it has always had.
+ * It used to be a `<select>` instead, holding one `<option>` per fetched model — in
+ * every row, for each of a row's two fields. The choices are identical in all of
+ * them, so that rendered the list once per row per field: 300 models through 一键设置
+ * measured 182,417 `<option>` elements on a single screen, which an Android WebView
+ * renderer does not survive. A killed renderer is a blank white page with nothing in
+ * JavaScript to explain it — the failure reported from the device, and the reason it
+ * could not be reproduced in a browser, where the same DOM merely froze.
+ *
+ * So this only says "choose", and the editor renders the list once, while a chooser
+ * is open. That is the shape the desktop has always had, where one `<datalist>`
+ * serves every row through its id.
  */
-function FetchedModelPicker({
+function FetchedModelPicker({ label, onOpen }: { label: string; onOpen: () => void }) {
+  return (
+    <button
+      aria-label={label}
+      className="inline-flex items-center gap-1 rounded-xl border border-stone-200 bg-white px-2.5 py-2 text-[12px] font-semibold text-stone-600 outline-none motion-control hover:bg-stone-50 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+      onClick={onOpen}
+      type="button"
+    >
+      <List aria-hidden="true" className="h-3.5 w-3.5" />
+      选择
+    </button>
+  );
+}
+
+/**
+ * The fetched models, listed once, filtered as you type.
+ *
+ * Mounted only while it is open, which is what keeps the list off the editor: a few
+ * hundred models is more than the rest of this screen put together.
+ */
+function FetchedModelChooser({
   label,
   models,
+  onClose,
   onPick,
 }: {
   label: string;
   models: FetchedRouteModel[];
+  onClose: () => void;
   onPick: (modelId: string) => void;
 }) {
-  if (models.length === 0) {
-    return null;
-  }
+  const [filter, setFilter] = useState("");
+  const needle = filter.trim().toLowerCase();
+  const visible = needle
+    ? models.filter((model) => model.id.toLowerCase().includes(needle))
+    : models;
 
   return (
-    <select
+    <div
       aria-label={label}
-      className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-[12px] text-stone-600 outline-none motion-control focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-      // Uncontrolled-looking on purpose: it is a picker, not a field. React resets
-      // it to the placeholder after every choice, so the same option can be picked
-      // twice in a row without the control appearing to already hold a value.
-      onChange={(event) => {
-        const picked = event.target.value;
-        if (picked) {
-          onPick(picked);
+      className="motion-overlay motion-overlay-inset fixed z-[80] grid place-items-center overflow-auto bg-stone-950/35 p-4 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
         }
       }}
-      value=""
+      role="dialog"
     >
-      <option value="">从已拉取的模型中选择…</option>
-      {models.map((model) => (
-        <option key={model.id} value={model.id}>
-          {model.owned_by ? `${model.id}（${model.owned_by}）` : model.id}
-        </option>
-      ))}
-    </select>
+      <div className="flex max-h-full min-h-0 w-full max-w-md flex-col rounded-2xl border border-stone-200 bg-white p-4 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-semibold text-stone-900">选择模型</h3>
+            <p className="mt-0.5 text-[11px] text-stone-500">共 {models.length} 个</p>
+          </div>
+          <button
+            aria-label="关闭模型选择"
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-stone-400 motion-control hover:bg-stone-100 hover:text-stone-700"
+            onClick={onClose}
+            type="button"
+          >
+            <X aria-hidden="true" className="h-4 w-4" />
+          </button>
+        </div>
+        <input
+          aria-label="筛选模型"
+          className="mt-3 w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-[13px] text-stone-900 outline-none motion-control focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+          onChange={(event) => setFilter(event.target.value)}
+          placeholder="输入以筛选…"
+          value={filter}
+        />
+        <div className="mt-2 min-h-0 flex-1 overflow-auto rounded-lg border border-stone-200">
+          {visible.length === 0 ? (
+            <p className="p-4 text-center text-[12px] text-stone-400">没有匹配的模型。</p>
+          ) : (
+            <ul className="divide-y divide-stone-100">
+              {visible.map((model) => (
+                <li key={model.id}>
+                  <button
+                    aria-label={`选择模型 ${model.id}`}
+                    className="w-full break-all px-3 py-2 text-left font-mono text-[12px] text-stone-700 motion-control hover:bg-stone-50"
+                    onClick={() => onPick(model.id)}
+                    type="button"
+                  >
+                    {model.id}
+                    {model.owned_by ? (
+                      <span className="ml-2 font-sans text-[11px] text-stone-400">
+                        {model.owned_by}
+                      </span>
+                    ) : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1930,6 +1997,17 @@ function ModelMappingsEditor({
   // (`FetchedModelPicker`), so the list is left to the desktop, which has no native
   // popup at all and has always had the suggestions.
   const suggestFetchedModels = !isMobileApp();
+  /**
+   * Which field a chooser was opened for, or none.
+   *
+   * One at a time on purpose: the list is the expensive part of this screen, and
+   * there is never a reason for two of them to be up.
+   */
+  const [chooser, setChooser] = useState<{
+    index: number;
+    field: "from" | "to";
+    label: string;
+  } | null>(null);
   const isClaude = platform === "claude";
   // Codex is the only client that reads a per-model context window and effort
   // ladder out of the catalog we write, so it is the only editor that offers
@@ -2079,6 +2157,10 @@ function ModelMappingsEditor({
             const rowKey = isTemplateRow
               ? `claude-template-${mapping.from}`
               : `model-mapping-${index}`;
+            // Named once: the button and the chooser it opens have to carry the same
+            // accessible name, or the opener and its dialog do not read as a pair.
+            const requestPickerLabel = `从已拉取模型中选择请求模型 ${index + 1}`;
+            const upstreamPickerLabel = `从已拉取模型中选择上游模型 ${index + 1}`;
             const rowControls = (
               <div
                 className={`grid gap-2 sm:items-center ${
@@ -2122,11 +2204,12 @@ function ModelMappingsEditor({
                     value={mapping.from}
                   />
                 )}
-                {isMobileApp() && !isClaude ? (
+                {isMobileApp() && !isClaude && fetchedModels.length > 0 ? (
                   <FetchedModelPicker
-                    label={`从已拉取模型中选择请求模型 ${index + 1}`}
-                    models={fetchedModels}
-                    onPick={(modelId) => updateRow(index, { from: modelId })}
+                    label={requestPickerLabel}
+                    onOpen={() =>
+                      setChooser({ index, field: "from", label: requestPickerLabel })
+                    }
                   />
                 ) : null}
                 <ArrowRight className="hidden h-4 w-4 text-stone-400 sm:block" />
@@ -2138,11 +2221,12 @@ function ModelMappingsEditor({
                   placeholder="例如：gpt-4o"
                   value={mapping.to}
                 />
-                {isMobileApp() ? (
+                {isMobileApp() && fetchedModels.length > 0 ? (
                   <FetchedModelPicker
-                    label={`从已拉取模型中选择上游模型 ${index + 1}`}
-                    models={fetchedModels}
-                    onPick={(modelId) => updateRow(index, { to: modelId })}
+                    label={upstreamPickerLabel}
+                    onOpen={() =>
+                      setChooser({ index, field: "to", label: upstreamPickerLabel })
+                    }
                   />
                 ) : null}
                 {isClaude ? (
@@ -2212,6 +2296,21 @@ function ModelMappingsEditor({
       </div>
 
       {error && <p className="text-[12px] font-semibold text-red-700">{error}</p>}
+
+      {chooser ? (
+        <FetchedModelChooser
+          label={chooser.label}
+          models={fetchedModels}
+          onClose={() => setChooser(null)}
+          onPick={(modelId) => {
+            updateRow(
+              chooser.index,
+              chooser.field === "from" ? { from: modelId } : { to: modelId },
+            );
+            setChooser(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

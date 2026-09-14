@@ -3176,10 +3176,15 @@ describe("AccountsScreen", () => {
    * Android's WebView draws `<datalist>` suggestions itself and never commits the
    * choice to a controlled input, so on a phone the mapping fields could be typed
    * into but not filled from the list that was just fetched. That platform gets a
-   * native `<select>` carrying the same choices; the test after this one pins
-   * that the desktop keeps the datalist and no extra control.
+   * chooser instead; the test after this one pins that the desktop keeps the
+   * datalist and no extra control.
+   *
+   * The chooser replaces a `<select>` that carried one `<option>` per fetched model
+   * in every row and every field — 182,417 `<option>` elements with a 300-model list,
+   * which an Android WebView renderer does not survive. What matters here is that the
+   * choice still reaches the field.
    */
-  it("fills a mapping from the fetched models through a select on mobile", async () => {
+  it("fills a mapping from the fetched models through the chooser on mobile", async () => {
     const originalUserAgent = window.navigator.userAgent;
     Object.defineProperty(window.navigator, "userAgent", {
       configurable: true,
@@ -3199,14 +3204,16 @@ describe("AccountsScreen", () => {
       expect(await screen.findByText(/已获取 2 个模型/)).toBeInTheDocument();
 
       await userEvent.click(screen.getByRole("button", { name: "新增映射" }));
-      await userEvent.selectOptions(
-        screen.getByLabelText("从已拉取模型中选择请求模型 1"),
-        "gpt-4o",
-      );
-      await userEvent.selectOptions(
-        screen.getByLabelText("从已拉取模型中选择上游模型 1"),
-        "gpt-5",
-      );
+      // Nothing is listed until the chooser is opened, which is the whole point.
+      expect(screen.queryByLabelText("选择模型 gpt-4o")).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByLabelText("从已拉取模型中选择请求模型 1"));
+      await userEvent.click(await screen.findByLabelText("选择模型 gpt-4o"));
+
+      await userEvent.click(screen.getByLabelText("从已拉取模型中选择上游模型 1"));
+      await userEvent.click(await screen.findByLabelText("选择模型 gpt-5"));
+      // Picking closes it again, so the list is only in the tree while it is wanted.
+      expect(screen.queryByLabelText("选择模型 gpt-5")).not.toBeInTheDocument();
 
       expect(screen.getByLabelText("请求模型 1")).toHaveValue("gpt-4o");
       expect(screen.getByLabelText("上游模型 1")).toHaveValue("gpt-5");
