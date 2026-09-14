@@ -55,7 +55,10 @@ object WebViewWatchdog {
   private var replied = false
   private var misses = 0
 
-  private val ask = Runnable {
+  // Both of these are typed explicitly, and they have to be: each one schedules the
+  // other, so Kotlin cannot infer either from the other and reports a recursive
+  // problem instead. Naming the type breaks the cycle at the point of declaration.
+  private val ask: Runnable = Runnable {
     if (!watching) {
       return@Runnable
     }
@@ -77,7 +80,7 @@ object WebViewWatchdog {
     handler.postDelayed(judge(view), REPLY_DEADLINE_MS)
   }
 
-  private fun judge(view: WebView) = Runnable {
+  private fun judge(view: WebView): Runnable = Runnable {
     if (!watching) {
       return@Runnable
     }
