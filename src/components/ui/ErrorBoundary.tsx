@@ -1,5 +1,6 @@
 import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
+import { recordCrash } from "../../lib/crashLog";
 
 type ErrorBoundaryProps = {
   children: ReactNode;
@@ -24,6 +25,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: unknown, info: ErrorInfo) {
     console.error("Render failed", error, info.componentStack);
+    // The panel below is only readable while the app is up. Recording it as well
+    // means a crash that also takes the app down — or one the user could not read
+    // before the WebView reloaded — is still there on the next launch.
+    recordCrash(`boundary:${this.props.label ?? "unnamed"}`, error);
   }
 
   private reset = () => {

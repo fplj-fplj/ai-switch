@@ -1910,7 +1910,7 @@ function FetchedModelPicker({
 function ModelMappingsEditor({
   error,
   fetchError,
-  fetchedModels = [],
+  fetchedModels: fetchedModelsProp,
   isFetchingModels = false,
   label,
   onChange,
@@ -1918,6 +1918,18 @@ function ModelMappingsEditor({
   platform,
   value,
 }: ModelMappingsEditorProps) {
+  // A `null` reached `.length` here and took the whole editor down with it — caught
+  // by the app boundary, but only as a wall of text where the form had been. The
+  // default in the destructuring above covers `undefined` and nothing else, and an
+  // absent list is what `null` looks like on the wire.
+  const fetchedModels = Array.isArray(fetchedModelsProp) ? fetchedModelsProp : [];
+  // `<datalist>`'s popup is drawn by the WebView rather than by us, and on Android it
+  // is the one native control here that misbehaves: it opens, it does not commit, and
+  // because it is not a DOM node React cannot re-render it or tell whether it is
+  // still on screen. The mobile row has a real `<select>` carrying the same choices
+  // (`FetchedModelPicker`), so the list is left to the desktop, which has no native
+  // popup at all and has always had the suggestions.
+  const suggestFetchedModels = !isMobileApp();
   const isClaude = platform === "claude";
   // Codex is the only client that reads a per-model context window and effort
   // ladder out of the catalog we write, so it is the only editor that offers
@@ -2039,7 +2051,7 @@ function ModelMappingsEditor({
         </p>
       )}
       {fetchError ? <p className="text-[12px] font-semibold text-red-700">{fetchError}</p> : null}
-      {fetchedModels.length > 0 ? (
+      {fetchedModels.length > 0 && suggestFetchedModels ? (
         <datalist id={modelListId}>
           {fetchedModels.map((model) => (
             <option key={model.id} value={model.id}>
@@ -2104,7 +2116,7 @@ function ModelMappingsEditor({
                   <input
                     aria-label={`请求模型 ${index + 1}`}
                     className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-[13px] text-stone-900 outline-none motion-control focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                    list={modelListId}
+                    list={suggestFetchedModels ? modelListId : undefined}
                     onChange={(event) => updateRow(index, { from: event.target.value })}
                     placeholder="gpt-5.5"
                     value={mapping.from}
@@ -2121,7 +2133,7 @@ function ModelMappingsEditor({
                 <input
                   aria-label={`上游模型 ${index + 1}`}
                   className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-[13px] text-stone-900 outline-none motion-control focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                  list={modelListId}
+                  list={suggestFetchedModels ? modelListId : undefined}
                   onChange={(event) => updateRow(index, { to: event.target.value })}
                   placeholder="例如：gpt-4o"
                   value={mapping.to}
@@ -8631,14 +8643,14 @@ export function AccountsScreen({
       ) : null}
 
       {createOpen && (
-        <div className="motion-overlay motion-overlay-inset fixed z-50 grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm"
+        <div className="motion-overlay motion-overlay-inset fixed z-50 grid place-items-center overflow-auto bg-stone-950/35 p-4 backdrop-blur-sm"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setCreateOpen(false);
             }
           }}
         >
-          <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-stone-200 bg-white p-4 shadow-2xl">
+          <div className="max-h-full w-full max-w-2xl overflow-y-auto rounded-2xl border border-stone-200 bg-white p-4 shadow-2xl">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">

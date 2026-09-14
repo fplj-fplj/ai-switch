@@ -2,6 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { DeepLinkImportDialog } from "./components/deeplink/DeepLinkImportDialog";
+import { CrashReportBanner } from "./components/system/CrashReportBanner";
 import { LowDiskSpaceBanner } from "./components/system/LowDiskSpaceBanner";
 import { AutoUpdatePrompt } from "./components/updates/AutoUpdatePrompt";
 import {
@@ -194,10 +195,25 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
         <MotionProvider>
-        <DeepLinkImportDialog onImported={handleDeepLinkImported} />
-        <AutoUpdatePrompt />
+        {/* These three sit outside the boundary below, so a render throw in any of
+            them unmounts the whole tree and leaves a blank window with nothing to
+            read — the one failure the App boundary cannot speak for. Each renders
+            nothing at all in the ordinary case, so wrapping them costs no layout. */}
+        <ErrorBoundary label="Deep link">
+          <DeepLinkImportDialog onImported={handleDeepLinkImported} />
+        </ErrorBoundary>
+        <ErrorBoundary label="Updates">
+          <AutoUpdatePrompt />
+        </ErrorBoundary>
         {/* Gated on `webReady` so the poll never runs before the web token exists. */}
-        {webReady && <LowDiskSpaceBanner />}
+        <ErrorBoundary label="Disk">
+          {webReady && <LowDiskSpaceBanner />}
+        </ErrorBoundary>
+        {/* The report of an earlier launch's failure. Outside the App boundary on
+            purpose: it has to survive the thing it is reporting. */}
+        <ErrorBoundary label="Crash report">
+          <CrashReportBanner />
+        </ErrorBoundary>
         {!webReady ? (
           <WebAuthGate onAuthenticated={handleWebAuthenticated} />
         ) : (
