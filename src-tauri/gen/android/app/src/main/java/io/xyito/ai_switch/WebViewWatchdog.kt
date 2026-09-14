@@ -55,17 +55,18 @@ object WebViewWatchdog {
   private var replied = false
   private var misses = 0
 
-  // Both of these are typed explicitly, and they have to be: each one schedules the
-  // other, so Kotlin cannot infer either from the other and reports a recursive
-  // problem instead. Naming the type breaks the cycle at the point of declaration.
-  private val ask: Runnable = Runnable {
+  // Functions rather than values, and typed explicitly, because this pair schedules
+  // each other: a value cannot read itself while it is being initialised, and neither
+  // can be inferred from the other. A function body is not part of the initialiser,
+  // so both problems go away together.
+  private fun ask(): Runnable = Runnable {
     if (!watching) {
       return@Runnable
     }
     val view = target ?: resolveTarget()?.also { target = it }
     if (view == null) {
       // Not created yet, or replaced. Nothing to ask this round.
-      handler.postDelayed(ask, PROBE_INTERVAL_MS)
+      handler.postDelayed(ask(), PROBE_INTERVAL_MS)
       return@Runnable
     }
 
@@ -101,7 +102,7 @@ object WebViewWatchdog {
         }
       }
     }
-    handler.postDelayed(ask, PROBE_INTERVAL_MS)
+    handler.postDelayed(ask(), PROBE_INTERVAL_MS)
   }
 
   /** Begins watching. Called when the activity comes to the front. */
@@ -112,7 +113,7 @@ object WebViewWatchdog {
     }
     watching = true
     misses = 0
-    handler.post(ask)
+    handler.post(ask())
   }
 
   /** Stops watching. Called when the activity leaves the front. */
