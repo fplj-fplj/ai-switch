@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   assessPreviousRun,
   clearCrashes,
+  importNativeReports,
   installCrashCapture,
   readCrashes,
   readTrail,
@@ -134,6 +135,46 @@ describe("assessPreviousRun", () => {
     writeHeartbeat(justNow, null);
 
     expect(assessPreviousRun(Date.parse(justNow) + 1000)).toBe(false);
+    expect(readCrashes()).toHaveLength(0);
+  });
+});
+
+describe("importNativeReports", () => {
+  beforeEach(() => {
+    clearCrashes();
+  });
+
+  /** Lets the fire-and-forget promise settle before the log is read. */
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  it("records a silence the Android watchdog saw", async () => {
+    // This is the half the page cannot observe about itself: a renderer that stops
+    // answering never gets to write anything down.
+    importNativeReports(async () => ["2026-09-14T10:00:00.000Z", "2026-09-14T11:00:00.000Z"]);
+    await settle();
+
+    const crashes = readCrashes();
+    expect(crashes).toHaveLength(2);
+    expect(crashes[0].source).toBe("renderer silent");
+    expect(crashes[0].message).toContain("2026-09-14T11:00:00.000Z");
+    expect(crashes[1].message).toContain("2026-09-14T10:00:00.000Z");
+  });
+
+  it("says nothing when there is no watchdog to ask", async () => {
+    // Desktop, and any build where the plugin is not registered. A launch must not
+    // depend on it.
+    importNativeReports(async () => {
+      throw new Error("plugin not registered");
+    });
+    await settle();
+
+    expect(readCrashes()).toHaveLength(0);
+  });
+
+  it("says nothing when the watchdog has nothing to report", async () => {
+    importNativeReports(async () => []);
+    await settle();
+
     expect(readCrashes()).toHaveLength(0);
   });
 });

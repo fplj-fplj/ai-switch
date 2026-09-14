@@ -19,6 +19,22 @@ class MainActivity : TauriActivity() {
   }
 
   /**
+   * The watchdog asks the WebView whether it is still answering, and only while this
+   * activity is in front of the user: a backgrounded renderer is frozen by the
+   * system, so probing then would time out every round and record a death that never
+   * happened.
+   */
+  override fun onResume() {
+    super.onResume()
+    WebViewWatchdog.start(this)
+  }
+
+  override fun onPause() {
+    WebViewWatchdog.stop()
+    super.onPause()
+  }
+
+  /**
    * Android 13 and up hide notifications until the user grants this. Without it the
    * foreground service runs with nothing on screen — confusing for the user, and it
    * defeats the reason the notification exists.

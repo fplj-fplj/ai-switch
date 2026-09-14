@@ -96,6 +96,21 @@ class PoolRuntimePlugin(private val activity: Activity) : Plugin(activity) {
   }
 
   /**
+   * Whether the WebView stopped answering, and when.
+   *
+   * The page cannot observe this about itself — the code that would have noticed is
+   * the code that stopped running — so it is read here, from what the watchdog wrote,
+   * and cleared so that a single death is reported once rather than on every launch.
+   */
+  @Command
+  fun getRenderProcessReport(invoke: Invoke) {
+    val result = JSObject()
+    // Newline-separated ISO timestamps, one per observed silence.
+    result.put("silences", WebViewWatchdog.drain(activity))
+    invoke.resolve(result)
+  }
+
+  /**
    * Opens the first keep-alive screen this ROM actually has.
    *
    * Every vendor keeps this in a different, unexported activity, so the list is

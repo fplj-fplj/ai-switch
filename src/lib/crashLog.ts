@@ -262,6 +262,36 @@ export function installCrashCapture() {
   );
 }
 
+/**
+ * Brings in what the native side saw and the page could not.
+ *
+ * The Android watchdog asks the WebView whether it is still answering, which is the
+ * one question a page cannot ask about itself: the code that would have noticed a
+ * renderer going away is the code that stopped running. Its answers land in the same
+ * log as everything else, so the banner reports them the same way.
+ *
+ * The reader is passed in rather than imported, so this module stays free of the
+ * transport — it is read during failures and has no business depending on the thing
+ * that might be failing.
+ *
+ * Fire-and-forget: a launch must not wait on a plugin, and on desktop there is none.
+ */
+export function importNativeReports(readSilences: () => Promise<string[]>) {
+  void readSilences()
+    .then((silences) => {
+      for (const at of silences) {
+        recordCrash(
+          "renderer silent",
+          new Error(
+            `WebView 在 ${at} 停止响应（连续多轮探测都没有回调）。` +
+              "白屏很可能就发生在这一刻。",
+          ),
+        );
+      }
+    })
+    .catch(() => undefined);
+}
+
 function readJson<T>(key: string): T | null {
   const raw = storage()?.getItem(key);
   if (!raw) {

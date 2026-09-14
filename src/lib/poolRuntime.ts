@@ -66,6 +66,24 @@ export function getKeepAliveStatus() {
 }
 
 /**
+ * When the WebView was seen to stop answering, as ISO timestamps, oldest first.
+ *
+ * Read once and cleared on the native side, so a death is reported on the launch
+ * after it happened and not on every launch afterwards. Empty on desktop, and empty
+ * on a phone that has never gone quiet.
+ */
+export async function getRenderProcessSilences(): Promise<string[]> {
+  const result = await callPlugin<{ silences: string }>("getRenderProcessReport");
+  if (!result?.silences) {
+    return [];
+  }
+  return result.silences
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+/**
  * Opens the system's "don't optimise this app" dialog, and reports whether one
  * opened at all.
  *
