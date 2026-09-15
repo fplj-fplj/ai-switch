@@ -3311,7 +3311,17 @@ button:disabled {
   min-height: 0;
   height: 100%;
   transform-origin: center top;
-  will-change: transform, opacity;
+  /*
+   * `will-change: opacity` only — `transform` was here too, and it is what put every
+   * dialog in this app in the wrong place. Any `will-change` that names `transform`
+   * makes the element a containing block for `position: fixed` descendants, so the
+   * overlays inside a page were positioned against the page's box instead of the
+   * viewport: 58px short at the bottom, and carried off screen entirely as soon as
+   * the page scrolled. The transition still performs — framer-motion writes a
+   * `transform` inline while it runs, which promotes the layer for the duration
+   * anyway — and no dialog is open during a page change.
+   */
+  will-change: opacity;
 }
 
 .vibe-host {

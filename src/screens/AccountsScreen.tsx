@@ -1825,27 +1825,34 @@ function CodexMappingCapabilityFields({
         <span className="text-[11px] font-semibold text-stone-500">推理程度</span>
         {levelChoices.map((level) => {
           const checked = effectiveLevels.includes(level);
+          // The catalog needs at least one effort, so the last one standing cannot be
+          // cleared — clearing it would advertise an empty menu.
+          const locked = checked && effectiveLevels.length === 1;
           return (
-            <label
-              className={`inline-flex cursor-pointer items-center rounded-lg border px-2 py-1 text-[11px] font-semibold motion-control ${
+            <button
+              aria-checked={checked}
+              aria-label={`推理程度 ${level} ${index + 1}`}
+              className={`inline-flex items-center rounded-lg border px-2 py-1 text-[11px] font-semibold motion-control disabled:cursor-not-allowed ${
                 checked
                   ? "border-violet-300 bg-violet-100 text-violet-900"
                   : "border-stone-200 bg-white text-stone-500 hover:bg-stone-50"
-              } ${checked && effectiveLevels.length === 1 ? "cursor-not-allowed opacity-70" : ""}`}
+              } ${locked ? "opacity-70" : ""}`}
+              disabled={locked}
               key={level}
+              // A button, not a `<label>` wrapping an `sr-only` checkbox. That
+              // checkbox was a 1x1 box clipped to nothing, and this row sits at the
+              // very bottom of the form — so when a tap focused it, the browser
+              // scrolled it into view by scrolling the form to its end, taking the
+              // page with it. Cancelling the default of `mousedown` does not stop it
+              // on a touch device, where the focus is the touch's own. A button is
+              // where it looks like it is, so bringing it into view is a no-op.
+              // `role` keeps the checkbox semantics the tests and screen readers use.
+              onClick={() => toggleLevel(level, !checked)}
+              role="checkbox"
+              type="button"
             >
-              <input
-                aria-label={`推理程度 ${level} ${index + 1}`}
-                checked={checked}
-                className="sr-only"
-                // The catalog needs at least one effort, so the last one standing
-                // cannot be cleared — unticking it would advertise an empty menu.
-                disabled={checked && effectiveLevels.length === 1}
-                onChange={(event) => toggleLevel(level, event.target.checked)}
-                type="checkbox"
-              />
               {level}
-            </label>
+            </button>
           );
         })}
         <span className="min-w-[6em] shrink-0 whitespace-nowrap text-[11px] font-medium text-stone-400">
