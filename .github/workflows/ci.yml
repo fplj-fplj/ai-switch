@@ -214,6 +214,12 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # The action installs `tools platform-tools` by default, and `tools` is no
+          # longer published — asking for it fails the whole job in the setup step,
+          # before anything of ours is built. `platform-tools` is still wanted; the
+          # NDK is installed explicitly by the step below.
+          packages: "platform-tools"
 
       # `NDK_HOME` has to be exported explicitly. The Tauri CLI looks for that exact
       # variable and reports the NDK as missing even when it is installed.
