@@ -10,8 +10,8 @@ export function OperationLogScreen() {
   return (
     <section>
       <div className="border-b border-stone-200 px-1 pb-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">Activity</p>
-        <h1 className="mt-0.5 text-lg font-semibold text-stone-950">Config Operations</h1>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">活动</p>
+        <h1 className="mt-0.5 text-lg font-semibold text-stone-950">配置操作</h1>
       </div>
       {snapshotsQuery.isLoading ? <p className="mt-3 text-sm text-stone-500">Loading config operations...</p> : null}
       {snapshotsQuery.error ? (

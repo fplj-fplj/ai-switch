@@ -11,9 +11,9 @@ describe("ImportPanel", () => {
     fireEvent.change(screen.getByLabelText(/json/i), {
       target: { value: "{\"providers\":[],\"accounts\":[]}" },
     });
-    await userEvent.click(screen.getByRole("button", { name: /import/i }));
+    await userEvent.click(screen.getByRole("button", { name: /导入/ }));
 
-    expect(screen.getByText("Batch name is required.")).toBeInTheDocument();
+    expect(screen.getByText("请填写批量名称。")).toBeInTheDocument();
     expect(onImport).not.toHaveBeenCalled();
   });
 });

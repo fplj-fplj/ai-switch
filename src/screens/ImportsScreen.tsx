@@ -13,8 +13,8 @@ export function ImportsScreen() {
   return (
     <section className="space-y-3">
       <div className="rounded-2xl border border-stone-200 bg-white/82 px-4 py-3 shadow-sm">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">Data</p>
-        <h1 className="mt-0.5 text-lg font-semibold text-stone-950">Imports</h1>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">数据</p>
+        <h1 className="mt-0.5 text-lg font-semibold text-stone-950">导入</h1>
       </div>
       <ImportPanel onImport={(request) => importMutation.mutateAsync(request).then(() => undefined)} />
       {importMutation.data && (

@@ -71,17 +71,17 @@ describe("TailscaleSettings", () => {
   it("submits auth key and clears the input", async () => {
     render(
       <QueryClientProvider client={createQueryClient()}>
-        <I18nProvider initialLanguage="en">
+        <I18nProvider initialLanguage="zh-CN">
           <TailscaleSettings enabled />
         </I18nProvider>
       </QueryClientProvider>,
     );
 
-    const input = await screen.findByLabelText("Auth key");
+    const input = await screen.findByLabelText("授权密钥");
     await userEvent.type(input, "tskey-auth-test");
     expect(input).toHaveValue("tskey-auth-test");
 
-    await userEvent.click(screen.getByRole("button", { name: "Connect with auth key" }));
+    await userEvent.click(screen.getByRole("button", { name: "使用授权密钥连接" }));
 
     await waitFor(() => {
       expect(startTailscaleWithAuthKey).toHaveBeenCalledWith("tskey-auth-test");
@@ -102,16 +102,16 @@ describe("TailscaleSettings", () => {
 
     render(
       <QueryClientProvider client={createQueryClient()}>
-        <I18nProvider initialLanguage="en">
+        <I18nProvider initialLanguage="zh-CN">
           <TailscaleSettings enabled />
         </I18nProvider>
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByText("Remote access")).toBeInTheDocument();
+    expect(await screen.findByText("远程访问")).toBeInTheDocument();
     expect(screen.getByText("https://ai-switch.tailnet.ts.net:3090")).toBeInTheDocument();
     expect(screen.queryByText("100.64.0.12:3090")).not.toBeInTheDocument();
-    expect(screen.getByText("Connected")).toBeInTheDocument();
+    expect(screen.getByText("已连接")).toBeInTheDocument();
   });
 
   it("creates a short-lived mobile pairing QR without displaying the Web Service token", async () => {
@@ -129,17 +129,17 @@ describe("TailscaleSettings", () => {
 
     render(
       <QueryClientProvider client={createQueryClient()}>
-        <I18nProvider initialLanguage="en">
+        <I18nProvider initialLanguage="zh-CN">
           <TailscaleSettings enabled exposureMode="public" />
         </I18nProvider>
       </QueryClientProvider>,
     );
 
-    await userEvent.click(await screen.findByRole("button", { name: "Show mobile pairing QR" }));
+    await userEvent.click(await screen.findByRole("button", { name: "显示移动端配对二维码" }));
     await waitFor(() => {
       expect(createMobilePairing).toHaveBeenCalledTimes(1);
     });
-    expect(await screen.findByAltText("Mobile pairing QR code")).toBeInTheDocument();
+    expect(await screen.findByAltText("移动端配对二维码")).toBeInTheDocument();
     expect(screen.getByText(/pair_test/)).toBeInTheDocument();
     expect(screen.queryByText("secret-web-service-token")).not.toBeInTheDocument();
   });

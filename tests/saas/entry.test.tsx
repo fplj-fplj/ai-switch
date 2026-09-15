@@ -13,7 +13,6 @@ let authenticated = false;
 let failure = "";
 beforeEach(() => {
   localStorage.clear();
-  localStorage.setItem("saas.locale", "en");
   window.history.replaceState({}, "", "/");
   authenticated = false;
   failure = "";
@@ -41,8 +40,8 @@ describe("SaaS user portal", () => {
   });
   it("shows GitHub login without fetching private data", async () => {
     render(<SaasPortal />);
-    expect(await screen.findByRole("button", { name: /^sign in$/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /continue with github/i })).toHaveAttribute("href", "/api/saas/auth/github");
+    expect(await screen.findByRole("button", { name: /^登录$/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /使用 GitHub 继续/ })).toHaveAttribute("href", "/api/saas/auth/github");
     expect(fetcher.mock.calls.some(([path]) => String(path).includes("/user/"))).toBe(false);
     expect(screen.queryByText("sk-saas-secret-once")).not.toBeInTheDocument();
   });
@@ -57,9 +56,9 @@ describe("SaaS user portal", () => {
     });
     const actor = userEvent.setup();
     render(<SaasPortal />);
-    await actor.type(await screen.findByLabelText(/^email$/i), "member@example.com");
-    await actor.type(screen.getByLabelText(/^password$/i), "secret-pass");
-    await actor.click(screen.getByRole("button", { name: /^sign in$/i }));
+    await actor.type(await screen.findByLabelText(/^邮箱$/i), "member@example.com");
+    await actor.type(screen.getByLabelText(/^密码$/i), "secret-pass");
+    await actor.click(screen.getByRole("button", { name: /^登录$/i }));
     await waitFor(() => expect(fetcher).toHaveBeenCalledWith("/api/saas/auth/password", expect.objectContaining({
       body: JSON.stringify({ email: "member@example.com", password: "secret-pass" }),
       headers: { "Content-Type": "application/json" },
@@ -73,9 +72,9 @@ describe("SaaS user portal", () => {
       return Response.json({});
     });
     render(<SaasPortal />);
-    expect(await screen.findByRole("link", { name: /continue with github/i })).toBeInTheDocument();
-    expect(screen.queryByLabelText(/^email$/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/^password$/i)).not.toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /使用 GitHub 继续/ })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^邮箱$/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^密码$/i)).not.toBeInTheDocument();
   });
 
   it("renders the actual wallet and aggregates, not seeded statistics", async () => {
@@ -83,7 +82,7 @@ describe("SaaS user portal", () => {
     render(<SaasPortal />);
     expect(await screen.findByText("$12.50")).toBeInTheDocument();
     expect(await screen.findByText("$1.234567")).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: /workspace/i })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: /工作空间/ })).toBeInTheDocument();
     expect(portalCss).toMatch(/\.saas-root:not\(\.saas-embedded\)\s*{[^}]*height:\s*100dvh[^}]*overflow:\s*hidden/s);
     expect(portalCss).toMatch(/\.saas-main\s*{[^}]*overflow-y:\s*auto/s);
     expect(portalCss).toMatch(/\.saas-main\.saas-scrolling[^{]*{[^}]*scrollbar-color/s);
@@ -93,7 +92,7 @@ describe("SaaS user portal", () => {
   it("shows the main scrollbar only while scrolling", async () => {
     authenticated = true;
     render(<SaasPortal />);
-    await screen.findByRole("navigation", { name: /workspace/i });
+    await screen.findByRole("navigation", { name: /工作空间/ });
     const main = screen.getByRole("main");
     expect(main).not.toHaveClass("saas-scrolling");
     vi.useFakeTimers();
@@ -112,13 +111,13 @@ describe("SaaS user portal", () => {
     window.history.replaceState({}, "", "/api-keys");
     const actor = userEvent.setup();
     render(<SaasPortal />);
-    await actor.click(await screen.findByRole("button", { name: /^create api key$/i }));
-    await actor.type(screen.getByLabelText(/^key name$/i), "Laptop");
-    await actor.selectOptions(screen.getByLabelText(/^group$/i), "g1");
-    await actor.click(screen.getByRole("button", { name: /^create key$/i }));
+    await actor.click(await screen.findByRole("button", { name: /^创建 API 密钥$/i }));
+    await actor.type(screen.getByLabelText(/^密钥名称$/i), "Laptop");
+    await actor.selectOptions(screen.getByLabelText(/^分组$/i), "g1");
+    await actor.click(screen.getByRole("button", { name: /^创建密钥$/i }));
     expect(await screen.findByText("sk-saas-secret-once")).toBeInTheDocument();
     expect(fetcher).toHaveBeenCalledWith("/api/saas/user/keys.create", expect.objectContaining({ body: expect.stringContaining('"groupId":"g1"') }));
-    await actor.click(screen.getByRole("button", { name: /saved.*close/i }));
+    await actor.click(screen.getByRole("button", { name: /我已保存，关闭/ }));
     expect(screen.queryByText("sk-saas-secret-once")).not.toBeInTheDocument();
   });
 
@@ -127,9 +126,9 @@ describe("SaaS user portal", () => {
     window.history.replaceState({}, "", "/recharge");
     const actor = userEvent.setup();
     render(<SaasPortal />);
-    await actor.click(await screen.findByRole("button", { name: /cancel request/i }));
+    await actor.click(await screen.findByRole("button", { name: /取消申请/ }));
     expect(fetcher.mock.calls.some(([path]) => path.endsWith("recharges.cancel"))).toBe(false);
-    await actor.click(screen.getByRole("button", { name: /confirm cancellation/i }));
+    await actor.click(screen.getByRole("button", { name: /确认取消/ }));
     await waitFor(() => expect(fetcher).toHaveBeenCalledWith("/api/saas/user/recharges.cancel", expect.objectContaining({ body: JSON.stringify({ id: "r1" }) })));
   });
 
@@ -138,11 +137,11 @@ describe("SaaS user portal", () => {
     window.history.replaceState({}, "", "/redeem");
     const actor = userEvent.setup();
     render(<SaasPortal />);
-    await actor.type(await screen.findByLabelText(/redemption code/i), "used-code");
+    await actor.type(await screen.findByLabelText(/兑换码/), "used-code");
     failure = "This code has already been used.";
-    await actor.click(screen.getByRole("button", { name: /^redeem now$/i }));
+    await actor.click(screen.getByRole("button", { name: /^立即兑换$/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent(failure);
-    expect(screen.queryByText(/credited to your balance/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/兑换成功，到账/)).not.toBeInTheDocument();
   });
 
   it("refreshes confirmed balance after a successful redemption", async () => {
@@ -150,9 +149,9 @@ describe("SaaS user portal", () => {
     window.history.replaceState({}, "", "/redeem");
     const actor = userEvent.setup();
     render(<SaasPortal />);
-    await actor.type(await screen.findByLabelText(/redemption code/i), "valid-code");
-    await actor.click(screen.getByRole("button", { name: /^redeem now$/i }));
-    expect(await screen.findByText(/redeemed.*credited/i)).toHaveTextContent("$1.00");
+    await actor.type(await screen.findByLabelText(/兑换码/), "valid-code");
+    await actor.click(screen.getByRole("button", { name: /^立即兑换$/i }));
+    expect(await screen.findByText(/兑换成功，到账/)).toHaveTextContent("$1.00");
     await waitFor(() => expect(fetcher.mock.calls.filter(([path]) => path.endsWith("overview")).length).toBeGreaterThan(1));
   });
 });

@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import { ReleaseNotes } from "../src/components/updates/ReleaseNotes";
 import { I18nProvider } from "../src/lib/i18n";
 
-function renderNotes(notes: string, language: "zh-CN" | "en" = "zh-CN") {
+function renderNotes(notes: string) {
   return render(
-    <I18nProvider initialLanguage={language}>
+    <I18nProvider initialLanguage="zh-CN">
       <ReleaseNotes notes={notes} />
     </I18nProvider>,
   );

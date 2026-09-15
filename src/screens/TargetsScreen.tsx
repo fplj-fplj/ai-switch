@@ -20,8 +20,8 @@ export function TargetsScreen() {
   return (
     <section className="space-y-3">
       <div className="border-b border-stone-200 px-1 pb-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">Routing</p>
-        <h1 className="mt-0.5 text-lg font-semibold text-stone-950">Targets</h1>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">路由</p>
+        <h1 className="mt-0.5 text-lg font-semibold text-stone-950">目标</h1>
       </div>
       {statusesQuery.isLoading ? <p className="text-sm text-stone-500">Loading target configuration status...</p> : null}
       {statusesQuery.error ? (

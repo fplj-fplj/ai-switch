@@ -12,9 +12,9 @@ vi.mock("@tauri-apps/plugin-updater", () => ({ check: mocks.check }));
 vi.mock("@tauri-apps/plugin-process", () => ({ relaunch: mocks.relaunch }));
 vi.mock("../src/lib/transport", () => ({ isDesktop: () => true }));
 
-function renderPrompt(language: "zh-CN" | "en" = "zh-CN") {
+function renderPrompt() {
   return render(
-    <I18nProvider initialLanguage={language}>
+    <I18nProvider initialLanguage="zh-CN">
       <AutoUpdatePrompt />
     </I18nProvider>,
   );
@@ -138,7 +138,7 @@ describe("AutoUpdatePrompt", () => {
   it("renders the release notes as markdown in the interface language", async () => {
     mocks.check.mockResolvedValue({ version: "0.7.2", body: BILINGUAL_BODY });
 
-    renderPrompt("zh-CN");
+    renderPrompt();
 
     await act(async () => {
       await Promise.resolve();
@@ -148,22 +148,8 @@ describe("AutoUpdatePrompt", () => {
     const dialog = screen.getByRole("dialog", { name: "发现新版本" });
     expect(within(dialog).getByText("修复")).toBeInTheDocument();
     expect(within(dialog).getByRole("listitem")).toHaveTextContent("修正了更新日志显示为空的问题。");
+    // The manifest carries both halves; only the Chinese one is shown, because it is
+    // the only language this build has.
     expect(within(dialog).queryByText("English Release Notes")).not.toBeInTheDocument();
-  });
-
-  it("shows the English half when the interface is English", async () => {
-    window.localStorage.setItem("ai-switch.language", "en");
-    mocks.check.mockResolvedValue({ version: "0.7.2", body: BILINGUAL_BODY });
-
-    renderPrompt("en");
-
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    const dialog = screen.getByRole("dialog", { name: "A new version is available" });
-    expect(within(dialog).getByText("Fixes")).toBeInTheDocument();
-    expect(within(dialog).queryByText("中文发布说明")).not.toBeInTheDocument();
   });
 });

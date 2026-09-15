@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { act } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -208,7 +208,6 @@ describe("AppLayout", () => {
     expect(screen.getByRole("button", { name: "Codex" })).toHaveAttribute("title", "Codex");
     expect(screen.getByRole("button", { name: "Codex" }).querySelector("svg")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Codex" }).querySelector("span.font-medium")).toHaveClass("sr-only");
-    expect(screen.getByRole("combobox", { name: "语言" }).parentElement).toHaveClass("hidden");
     expect(screen.getByText("智能体")).toHaveClass("hidden");
   });
 
@@ -265,6 +264,38 @@ describe("AppLayout", () => {
     await userEvent.click(screen.getByRole("button", { name: /MCP/ }));
     expect(onNavigate).toHaveBeenCalledWith("MCP");
     expect(sidebar).not.toHaveClass("app-sidebar-drawer");
+  });
+
+  it("reaches the agent list by re-tapping the agent already showing", async () => {
+    setViewportWidth(500);
+    const onNavigate = vi.fn();
+
+    render(
+      <I18nProvider initialLanguage="zh-CN">
+        <AppLayout
+          activeScreen="Codex"
+          onNavigate={onNavigate}
+          onToggleSidebar={vi.fn()}
+          sidebarCollapsed={false}
+        >
+          <div>content</div>
+        </AppLayout>
+      </I18nProvider>,
+    );
+
+    const sidebar = screen.getByTestId("app-sidebar");
+    expect(sidebar).toHaveClass("hidden");
+
+    // The bar's first destination is whichever agent is showing, and tapping it again
+    // is the way into the drawer. There is no separate "more" button: everything else
+    // the drawer holds is already in this bar, and the agent list is what it still
+    // adds.
+    await userEvent.click(
+      within(screen.getByTestId("app-bottom-nav")).getByRole("button", { name: "Codex" }),
+    );
+
+    expect(onNavigate).not.toHaveBeenCalled();
+    expect(sidebar).toHaveClass("app-sidebar-drawer");
   });
 
   it("defaults to a compact expanded width and resizes within bounds", () => {

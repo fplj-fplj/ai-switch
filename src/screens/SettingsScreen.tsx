@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { getSettings, saveSettings } from "../lib/api/client";
-import { normalizeLanguage, supportedLanguages, useI18n, type Language } from "../lib/i18n";
+import { useI18n } from "../lib/i18n";
 import { isDesktopApp, isMobileApp } from "../lib/platform";
 import { isScreenAvailable } from "../lib/screenAvailability";
 import { AutostartSettings } from "../components/settings/autostart-settings";
@@ -145,7 +145,7 @@ export function SettingsScreen({
   onSaasConfigChanged,
 }: SettingsScreenProps) {
   const queryClient = useQueryClient();
-  const { language, setLanguage, t } = useI18n();
+  const { t } = useI18n();
   const [activeSection, setActiveSection] = useState<"webService" | "https" | "notification" | "saas">("webService");
   const [localAgentVisibility, setLocalAgentVisibility] = useState(createDefaultAgentVisibility);
   const settingsQuery = useQuery({ queryKey: ["settings"], queryFn: getSettings });
@@ -153,7 +153,6 @@ export function SettingsScreen({
     mutationFn: saveSettings,
     onSuccess: (settings) => {
       queryClient.setQueryData(["settings"], settings);
-      setLanguage(normalizeLanguage(settings.language));
     },
   });
 
@@ -174,11 +173,6 @@ export function SettingsScreen({
     }
     setLocalAgentVisibility((current) => ({ ...current, [platform]: visible }));
   };
-  const handleLanguageChange = (nextLanguage: Language) => {
-    setLanguage(nextLanguage);
-    saveMutation.mutate({ ...settings, language: nextLanguage });
-  };
-
   return (
     <section className="space-y-3">
       <div className="rounded-2xl border border-stone-200 bg-white/82 shadow-sm">
@@ -346,29 +340,12 @@ export function SettingsScreen({
             </span>
           </label>
         )}
-        <label className="flex max-w-sm flex-col gap-1.5 text-[12px] font-semibold text-stone-600">
-          <span>{t("settings.language")}</span>
-          <select
-            aria-label={t("settings.language")}
-            className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-[13px] font-medium text-stone-900 shadow-sm outline-none motion-control focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-            disabled={saveMutation.isPending}
-            onChange={(event) => handleLanguageChange(event.target.value as Language)}
-            value={language}
-          >
-            {supportedLanguages.map((option) => (
-              <option key={option.code} value={option.code}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
         <button
           type="button"
           className="w-fit rounded-xl bg-stone-900 px-3 py-2 text-[13px] font-semibold text-white motion-control duration-150 hover:bg-stone-800"
           onClick={() =>
             saveMutation.mutate({
               ...settings,
-              language,
               theme: settings.theme === "dark" ? "system" : "dark",
             })
           }

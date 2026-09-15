@@ -20,7 +20,7 @@ import {
   type AgentPlatform,
   type AgentVisibility,
 } from "../../lib/agentVisibility";
-import { supportedLanguages, useI18n, type Language } from "../../lib/i18n";
+import { useI18n } from "../../lib/i18n";
 import { isScreenAvailable } from "../../lib/screenAvailability";
 import { useDragResize } from "../../lib/useDragResize";
 
@@ -71,8 +71,6 @@ type AppLayoutProps = {
   onNavigate: (screen: string) => void;
   onOpenVibe?: () => void;
   onToggleSidebar: () => void;
-  onLanguageChange?: (language: Language) => void;
-  languageSaving?: boolean;
   sidebarCollapsed: boolean;
   agentVisibility?: AgentVisibility;
   onAgentVisibilityChange?: (visibility: AgentVisibility) => void;
@@ -229,14 +227,12 @@ export function AppLayout({
   onNavigate,
   onOpenVibe,
   onToggleSidebar,
-  onLanguageChange,
-  languageSaving = false,
   sidebarCollapsed,
   agentVisibility,
   onAgentVisibilityChange,
   saasEnabled = false,
 }: AppLayoutProps) {
-  const { language, setLanguage, t } = useI18n();
+  const { t } = useI18n();
   const appShellRef = useRef<HTMLDivElement | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(readSidebarWidth);
   const [narrowLayout, setNarrowLayout] = useState(
@@ -303,15 +299,6 @@ export function AppLayout({
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [sidebarDrawerVisible]);
-
-  const handleLanguageChange = (nextLanguage: Language) => {
-    if (onLanguageChange) {
-      onLanguageChange(nextLanguage);
-      return;
-    }
-
-    setLanguage(nextLanguage);
-  };
 
   const handleToggleSidebar = () => {
     if (narrowLayout) {
@@ -458,27 +445,6 @@ export function AppLayout({
                 )}
               </div>
             </div>
-
-            <label
-              className={`mb-5 items-center justify-between gap-2 rounded-2xl border border-white/70 bg-white/50 px-3 py-2 text-[12px] font-medium text-stone-500 backdrop-blur-xl ${
-                sidebarContentCollapsed ? "hidden" : "flex"
-              }`}
-            >
-              <span>{t("layout.language")}</span>
-              <select
-                aria-label={t("layout.language")}
-                className="rounded-lg border border-stone-200 bg-white/80 px-2 py-1 text-[12px] font-medium text-stone-800 outline-none motion-control focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
-                disabled={languageSaving}
-                onChange={(event) => handleLanguageChange(event.target.value as Language)}
-                value={language}
-              >
-                {supportedLanguages.map((option) => (
-                  <option key={option.code} value={option.code}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
 
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-0.5">
               <section>
@@ -628,10 +594,11 @@ export function AppLayout({
         </section>
 
         {/* Narrow layouts navigate from the bottom. The rail is hidden above so the
-            content gets that column; the drawer still exists and "more" opens it,
-            which is where the full agent list and the per-agent visibility
-            switches live. A grid row rather than a fixed bar, so it cannot cover
-            the content and it inherits `#root`'s safe-area padding. */}
+            content gets that column; the drawer still exists, and re-tapping the agent
+            you are already on opens it — that is where the full agent list and the
+            per-agent visibility switches live, and it is the only thing the drawer
+            still offers that this bar does not. A grid row rather than a fixed bar, so
+            it cannot cover the content and it inherits `#root`'s safe-area padding. */}
         {narrowLayout && (
           <nav
             aria-label={t("layout.primary")}
@@ -640,10 +607,19 @@ export function AppLayout({
           >
             {activeAgentItem ? (
               <BottomNavButton
-                active={accountWorkspaceActive}
+                // Lit while the drawer is open as well, so a tap that opens it has
+                // some acknowledgement — it is otherwise a tap that appears to do
+                // nothing, because the screen behind it does not change.
+                active={accountWorkspaceActive || sidebarDrawerOpen}
                 icon={activeAgentItem.icon}
                 label={t(activeAgentItem.labelKey)}
-                onClick={() => handleNavigate(activeAgentItem.screen)}
+                onClick={() => {
+                  if (accountWorkspaceActive) {
+                    setSidebarDrawerOpen(true);
+                    return;
+                  }
+                  handleNavigate(activeAgentItem.screen);
+                }}
               />
             ) : null}
             <BottomNavButton
@@ -657,12 +633,6 @@ export function AppLayout({
               icon={Info}
               label={t("nav.about")}
               onClick={() => handleNavigate("About")}
-            />
-            <BottomNavButton
-              active={sidebarDrawerOpen}
-              icon={Menu}
-              label={t("layout.more")}
-              onClick={() => setSidebarDrawerOpen(true)}
             />
           </nav>
         )}

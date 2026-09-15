@@ -20,7 +20,7 @@ export function ImportPanel({ onImport }: ImportPanelProps) {
 
   async function submit() {
     if (batchName.trim().length === 0) {
-      setError("Batch name is required.");
+      setError("请填写批量名称。");
       return;
     }
 
@@ -40,7 +40,7 @@ export function ImportPanel({ onImport }: ImportPanelProps) {
   return (
     <div className="space-y-3 rounded-2xl border border-stone-200 bg-white/82 p-4 shadow-sm">
       <label className={labelClass}>
-        Batch name
+        批量名称
         <input
           value={batchName}
           onChange={(event) => setBatchName(event.target.value)}
@@ -48,7 +48,7 @@ export function ImportPanel({ onImport }: ImportPanelProps) {
         />
       </label>
       <label className={labelClass}>
-        Source label
+        来源标签
         <input
           value={sourceLabel}
           onChange={(event) => setSourceLabel(event.target.value)}
@@ -66,7 +66,7 @@ export function ImportPanel({ onImport }: ImportPanelProps) {
       </label>
       {error && <p className="text-[13px] font-medium text-red-700">{error}</p>}
       <Button type="button" onClick={submit}>
-        Import
+        导入
       </Button>
     </div>
   );

@@ -36,7 +36,7 @@ describe("OperationLogScreen", () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByText("Config Operations")).toBeInTheDocument();
+    expect(await screen.findByText("配置操作")).toBeInTheDocument();
     expect(await screen.findByText("write")).toBeInTheDocument();
     expect(screen.getByText("succeeded")).toBeInTheDocument();
     expect(screen.getByText(/target-codex/)).toBeInTheDocument();

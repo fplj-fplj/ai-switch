@@ -3,7 +3,6 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { skillDisplayCopy, skillSearchHaystack } from "../src/components/skills/catalog";
 import { bundledSkillCopy, bundledSkillIds } from "../src/components/skills/skillCopy";
-import { supportedLanguages } from "../src/lib/i18n";
 
 const PACKAGE_ROOT = resolve(process.cwd(), "src-tauri/resources/skill-packages");
 
@@ -19,13 +18,11 @@ function bundledResourceIds() {
 }
 
 describe("bundled Skill copy", () => {
-  it("covers every Skill shipped in a Skill package, in every language", () => {
+  it("covers every Skill shipped in a Skill package", () => {
     const missing: string[] = [];
     for (const id of bundledResourceIds()) {
-      for (const { code } of supportedLanguages) {
-        const copy = bundledSkillCopy(id, code);
-        if (!copy?.name.trim() || !copy?.summary.trim()) missing.push(`${id} (${code})`);
-      }
+      const copy = bundledSkillCopy(id, "zh-CN");
+      if (!copy?.name.trim() || !copy?.summary.trim()) missing.push(id);
     }
 
     expect(missing).toEqual([]);
@@ -50,7 +47,6 @@ describe("bundled Skill copy", () => {
       name: chinese.name,
       description: chinese.summary,
     });
-    expect(skillDisplayCopy(item, "en").name).toBe(bundledSkillCopy("brainstorming", "en")!.name);
   });
 
   it("falls back to a Skill's own metadata when nothing is bundled for it", () => {
@@ -58,7 +54,7 @@ describe("bundled Skill copy", () => {
       name: "My Skill",
       description: "Mine.",
     });
-    expect(skillDisplayCopy({ id: "my-skill", name: "  ", description: "  " }, "en")).toEqual({
+    expect(skillDisplayCopy({ id: "my-skill", name: "  ", description: "  " }, "zh-CN")).toEqual({
       name: "my-skill",
       description: null,
     });

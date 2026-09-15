@@ -275,31 +275,6 @@ describe("SettingsScreen", () => {
     expect(await screen.findByText("设置已保存。")).toBeInTheDocument();
   });
 
-  it("saves language changes and updates the selector", async () => {
-    const englishSettings = { ...settingsFixture, language: "en" };
-    vi.mocked(getSettings).mockResolvedValue(englishSettings);
-    vi.mocked(saveSettings).mockImplementation(async (settings) => settings);
-
-    render(
-      <QueryClientProvider client={createQueryClient()}>
-        <I18nProvider initialLanguage="en">
-          <SettingsScreen />
-        </I18nProvider>
-      </QueryClientProvider>,
-    );
-
-    const selector = await screen.findByRole("combobox", { name: "Language" });
-    await userEvent.selectOptions(selector, "zh-CN");
-
-    await waitFor(() =>
-      expect(vi.mocked(saveSettings).mock.calls[0][0]).toEqual({
-        ...englishSettings,
-        language: "zh-CN",
-      }),
-    );
-    expect(selector).toHaveValue("zh-CN");
-  });
-
   it("saves the close-to-tray choice without disturbing the other settings", async () => {
     vi.mocked(getSettings).mockResolvedValue(settingsFixture);
     vi.mocked(saveSettings).mockImplementation(async (settings) => settings);
@@ -461,29 +436,29 @@ describe("SettingsScreen", () => {
     vi.mocked(getSettings).mockResolvedValue(settingsFixture);
     const existing = await getWebServiceConfig();
     vi.mocked(getWebServiceConfig).mockResolvedValue({ ...existing, port: 0 });
-    render(<QueryClientProvider client={createQueryClient()}><I18nProvider initialLanguage="en"><SettingsScreen /></I18nProvider></QueryClientProvider>);
-    await waitFor(() => expect(screen.getByRole("spinbutton", { name: "Service port" })).toHaveValue(10086));
+    render(<QueryClientProvider client={createQueryClient()}><I18nProvider initialLanguage="zh-CN"><SettingsScreen /></I18nProvider></QueryClientProvider>);
+    await waitFor(() => expect(screen.getByRole("spinbutton", { name: "服务端口" })).toHaveValue(10086));
   });
 
   it("shows active shared TLS instead of the legacy certificate status", async () => {
     vi.mocked(getSettings).mockResolvedValue(settingsFixture);
     vi.mocked(getRouteProxyStatus).mockResolvedValue({ running:true, shared_listener:true, bind_host:"127.0.0.1", port:3090, base_url:"https://127.0.0.1:3090", https_port:3090, https_base_url:"https://127.0.0.1:3090" });
-    render(<QueryClientProvider client={createQueryClient()}><I18nProvider initialLanguage="en"><SettingsScreen /></I18nProvider></QueryClientProvider>);
+    render(<QueryClientProvider client={createQueryClient()}><I18nProvider initialLanguage="zh-CN"><SettingsScreen /></I18nProvider></QueryClientProvider>);
     await userEvent.click(await screen.findByRole("button", { name: /HTTPS/ }));
-    expect(await screen.findByText(/Web Service TLS is active/)).toBeInTheDocument();
+    expect(await screen.findByText(/Web 服务 TLS 已启用/)).toBeInTheDocument();
   });
 
   it("invalidates pool status when the shared Web service starts or stops", async () => {
     vi.mocked(getSettings).mockResolvedValue(settingsFixture);
     const client = createQueryClient();
     const invalidate = vi.spyOn(client, "invalidateQueries");
-    render(<QueryClientProvider client={client}><I18nProvider initialLanguage="en"><SettingsScreen /></I18nProvider></QueryClientProvider>);
-    expect(await screen.findByText(/use this listener/i)).toBeInTheDocument();
-    await userEvent.click(await screen.findByRole("button", { name: "Start service port" }));
+    render(<QueryClientProvider client={client}><I18nProvider initialLanguage="zh-CN"><SettingsScreen /></I18nProvider></QueryClientProvider>);
+    expect(await screen.findByText(/共用这个监听端口/)).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: "启动服务端口" }));
     await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["route-proxy-status"] }));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["route-proxy-https-status"] });
     invalidate.mockClear();
-    await userEvent.click(screen.getByRole("button", { name: "Stop service port" }));
+    await userEvent.click(screen.getByRole("button", { name: "停止服务端口" }));
     await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["route-proxy-status"] }));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["route-proxy-https-status"] });
   });
@@ -503,17 +478,17 @@ describe("SettingsScreen", () => {
 
     render(
       <QueryClientProvider client={createQueryClient()}>
-        <I18nProvider initialLanguage="en">
+        <I18nProvider initialLanguage="zh-CN">
           <SettingsScreen />
         </I18nProvider>
       </QueryClientProvider>,
     );
 
-    await userEvent.click(await screen.findByRole("button", { name: "Start service port" }));
+    await userEvent.click(await screen.findByRole("button", { name: "启动服务端口" }));
     await waitFor(() => expect(startWebServer).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(getTailscaleStatus).toHaveBeenCalledTimes(2));
 
-    await userEvent.click(await screen.findByRole("button", { name: "Stop service port" }));
+    await userEvent.click(await screen.findByRole("button", { name: "停止服务端口" }));
     await waitFor(() => expect(stopWebServer).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(getTailscaleStatus).toHaveBeenCalledTimes(3));
   });

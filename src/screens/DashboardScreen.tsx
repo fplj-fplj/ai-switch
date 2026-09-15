@@ -40,7 +40,7 @@ export function DashboardScreen() {
   return (
     <section>
       <div className="border-b border-stone-200 px-1 pb-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">Overview</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">总览</p>
         <h1 className="mt-0.5 text-lg font-semibold text-stone-950">AI Switch</h1>
       </div>
       <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">

@@ -162,7 +162,7 @@ export function NotificationSettings({ settings }: NotificationSettingsProps) {
           {/* Channels */}
           <div className="rounded-2xl border border-stone-200 bg-white/82 p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[13px] font-semibold text-stone-950">Channels</h3>
+              <h3 className="text-[13px] font-semibold text-stone-950">通道</h3>
               <div className="flex gap-1">
                 {(["feishu", "bark", "webhook"] as const).map((type) => (
                   <button

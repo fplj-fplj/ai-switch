@@ -75,9 +75,9 @@ const listFixture = {
   skills: [skillFixture],
 };
 
-function renderScreen(language: "en" | "zh-CN") {
+function renderScreen() {
   return render(
-    <I18nProvider initialLanguage={language}>
+    <I18nProvider initialLanguage="zh-CN">
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <SkillsScreen />
       </QueryClientProvider>
@@ -118,7 +118,7 @@ async function openCorePackage() {
       },
     ],
   });
-  renderScreen("zh-CN");
+  renderScreen();
   const user = userEvent.setup();
   await vi.waitFor(() => expect(screen.getByRole("tab", { name: "技能包" })).toBeInTheDocument());
   await user.click(screen.getByRole("tab", { name: "技能包" }));
@@ -158,7 +158,7 @@ describe("SkillsScreen", () => {
   });
 
   it("renders the Skills controls in Simplified Chinese", async () => {
-    renderScreen("zh-CN");
+    renderScreen();
 
     expect(await screen.findByRole("heading", { name: "技能" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "新建技能" })).toBeInTheDocument();
@@ -171,14 +171,14 @@ describe("SkillsScreen", () => {
       new ApiClientError("raw backend text", "skills.read_only", null, true, null),
     );
 
-    renderScreen("zh-CN");
+    renderScreen();
 
     expect(await screen.findByRole("alert")).toHaveTextContent("该技能为只读");
     expect(screen.getByRole("alert")).not.toHaveTextContent("raw backend text");
   });
 
   it("keeps the list and editor inside shrinkable containers", async () => {
-    renderScreen("en");
+    renderScreen();
 
     const list = await screen.findByRole("complementary");
     const editor = screen.getByRole("main");
@@ -189,7 +189,7 @@ describe("SkillsScreen", () => {
   });
 
   it("keeps Skills as the top-level screen and exposes two internal tabs", async () => {
-    renderScreen("zh-CN");
+    renderScreen();
 
     expect(screen.getByRole("tab", { name: "技能" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "技能包" })).toBeInTheDocument();
@@ -234,7 +234,7 @@ describe("SkillsScreen", () => {
       warnings: [],
     });
 
-    renderScreen("zh-CN");
+    renderScreen();
     await vi.waitFor(() => expect(screen.getByRole("tab", { name: "技能包" })).toBeInTheDocument());
     await userEvent.setup().click(screen.getByRole("tab", { name: "技能包" }));
 
@@ -245,7 +245,7 @@ describe("SkillsScreen", () => {
   it("shows bundled Chinese copy for a bundled Skill", async () => {
     vi.mocked(skillsList).mockResolvedValue({ ...listFixture, skills: [bundledSkillFixture] });
 
-    renderScreen("zh-CN");
+    renderScreen();
 
     expect(await screen.findByText("头脑风暴")).toBeInTheDocument();
     expect(
@@ -253,15 +253,17 @@ describe("SkillsScreen", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows bundled English copy instead of the agent-facing trigger sentence", async () => {
+  it("shows bundled copy instead of the agent-facing trigger sentence", async () => {
     vi.mocked(skillsList).mockResolvedValue({ ...listFixture, skills: [bundledSkillFixture] });
 
-    renderScreen("en");
+    renderScreen();
 
-    expect(await screen.findByText("Brainstorming")).toBeInTheDocument();
+    expect(await screen.findByText("头脑风暴")).toBeInTheDocument();
     expect(
-      screen.getByText("Turns an idea into an approved design and spec before any code gets written."),
+      screen.getByText("通过对话把想法整理成规格说明，得到确认后才允许动手写代码。"),
     ).toBeInTheDocument();
+    // The Skill file's own description is a long trigger sentence meant for an agent,
+    // not a line to read in a list.
     expect(screen.queryByText(/You MUST use this before any creative work/)).not.toBeInTheDocument();
   });
 
@@ -271,7 +273,7 @@ describe("SkillsScreen", () => {
       skills: [bundledSkillFixture, skillFixture],
     });
 
-    renderScreen("zh-CN");
+    renderScreen();
     const list = await screen.findByRole("complementary");
     await vi.waitFor(() => expect(within(list).getByText("Demo Skill")).toBeInTheDocument());
     await userEvent.setup().type(screen.getByLabelText("筛选技能"), "头脑");

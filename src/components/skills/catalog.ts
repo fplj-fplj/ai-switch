@@ -1,5 +1,4 @@
 import type { SkillSource } from "../../lib/api/types";
-import { supportedLanguages } from "../../lib/i18n";
 import type { Language, TranslationKey } from "../../lib/i18n";
 import { bundledSkillCopy } from "./skillCopy";
 
@@ -65,13 +64,14 @@ export function skillDisplayCopy(item: SkillLike, language: Language): SkillDisp
   };
 }
 
-/// Filter text is matched against every language's copy plus the raw metadata, so
-/// "头脑风暴" and "brainstorming" find the same Skill whichever language the UI is in.
+/// Filter text is matched against the display copy plus the raw metadata, so "头脑风暴"
+/// and "brainstorming" find the same Skill — the Chinese name from the copy, the
+/// English from the Skill's own id, which is what the files are named.
 export function skillSearchHaystack(item: SkillLike): string {
   const parts = [item.id, item.name ?? "", item.description ?? ""];
-  for (const { code } of supportedLanguages) {
-    const copy = bundledSkillCopy(item.id, code);
-    if (copy) parts.push(copy.name, copy.summary);
+  const copy = bundledSkillCopy(item.id, "zh-CN");
+  if (copy) {
+    parts.push(copy.name, copy.summary);
   }
   return parts.join(" ").toLowerCase();
 }

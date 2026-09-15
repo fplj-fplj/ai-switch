@@ -175,22 +175,22 @@ function renderScreen() {
 }
 
 async function expandProjectDirectory() {
-  await userEvent.click(await screen.findByRole("button", { name: "Expand folder D:/repo/app" }));
+  await userEvent.click(await screen.findByRole("button", { name: "展开文件夹 D:/repo/app" }));
 }
 
 async function openAppearanceDialog() {
-  await userEvent.click(await screen.findByRole("button", { name: "Switch Vibe theme" }));
-  return screen.findByRole("dialog", { name: "Appearance" });
+  await userEvent.click(await screen.findByRole("button", { name: "切换 Vibe 主题" }));
+  return screen.findByRole("dialog", { name: "外观" });
 }
 
-async function switchThemeFromAppearance(theme: "Solarized Dark" | "Light" | "Skin") {
+async function switchThemeFromAppearance(theme: "Solarized Dark" | "亮色" | "皮肤") {
   await openAppearanceDialog();
   await userEvent.click(await screen.findByRole("button", { name: theme }));
-  await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  await userEvent.click(screen.getByRole("button", { name: "取消" }));
 }
 
 async function switchToSkinTheme() {
-  await switchThemeFromAppearance("Skin");
+  await switchThemeFromAppearance("皮肤");
 }
 
 function dispatchPointerEvent(
@@ -259,7 +259,7 @@ describe("VibeScreen", () => {
     renderScreen();
 
     const folderToggle = await screen.findByRole("button", {
-      name: "Expand folder D:/repo/app",
+      name: "展开文件夹 D:/repo/app",
     });
     expect(folderToggle).toHaveTextContent("repo/app");
     expect(screen.queryByText("D:/repo/app")).not.toBeInTheDocument();
@@ -299,11 +299,11 @@ describe("VibeScreen", () => {
     renderScreen();
 
     const folderToggle = await screen.findByRole("button", {
-      name: "Expand folder project-alpha",
+      name: "展开文件夹 project-alpha",
     });
     expect(folderToggle).toHaveTextContent("project-alpha");
-    expect(screen.queryByRole("button", { name: "Expand folder 2026-05-24/project-alpha" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Expand folder 2026-05-28/project-alpha" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "展开文件夹 2026-05-24/project-alpha" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "展开文件夹 2026-05-28/project-alpha" })).not.toBeInTheDocument();
 
     await userEvent.click(folderToggle);
 
@@ -328,7 +328,7 @@ describe("VibeScreen", () => {
     renderScreen();
 
     const folderToggle = await screen.findByRole("button", {
-      name: "Expand folder D:/repo/sessions/2026-05-24",
+      name: "展开文件夹 D:/repo/sessions/2026-05-24",
     });
     expect(folderToggle).toHaveTextContent("2026-05-24");
     expect(folderToggle).toHaveAttribute("title", "D:/repo/sessions/2026-05-24");
@@ -339,7 +339,7 @@ describe("VibeScreen", () => {
     renderScreen();
 
     await expandProjectDirectory();
-    await userEvent.click(await screen.findByRole("button", { name: /Resume Fix terminal bug/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /恢复 Fix terminal bug/ }));
 
     await waitFor(() =>
       expect(createTerminalSession).toHaveBeenCalledWith({
@@ -360,7 +360,7 @@ describe("VibeScreen", () => {
 
     await expandProjectDirectory();
     const disabled = await screen.findByRole("button", {
-      name: /Cannot resume Missing resume/,
+      name: /无法恢复 Missing resume/,
     });
     expect(disabled).toBeDisabled();
     expect(createTerminalSession).not.toHaveBeenCalled();
@@ -369,10 +369,10 @@ describe("VibeScreen", () => {
   it("opens Vibe from the app navigation", async () => {
     render(<App />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Switch to Vibe mode" }));
+    await userEvent.click(screen.getByRole("button", { name: "切换到 Vibe 模式" }));
 
     expect(
-      await screen.findByRole("heading", { name: "Terminal workspace · Vibe mode" }),
+      await screen.findByRole("heading", { name: "终端工作区 · Vibe 模式" }),
     ).toBeInTheDocument();
     expect(screen.queryByText("Agent accounts placeholder")).not.toBeInTheDocument();
   });
@@ -380,18 +380,18 @@ describe("VibeScreen", () => {
   it("keeps Vibe terminals alive when switching back to the default mode", async () => {
     render(<App />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Switch to Vibe mode" }));
+    await userEvent.click(screen.getByRole("button", { name: "切换到 Vibe 模式" }));
     await expandProjectDirectory();
-    await userEvent.click(await screen.findByRole("button", { name: /Resume Fix terminal bug/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /恢复 Fix terminal bug/ }));
     const pane = await screen.findByTestId("terminal-pane-term-1");
 
-    await userEvent.click(screen.getByRole("button", { name: "Switch to Agent mode" }));
+    await userEvent.click(screen.getByRole("button", { name: "切换到代理模式" }));
 
     expect(await screen.findByText("Agent accounts placeholder")).toBeInTheDocument();
     // The Vibe subtree stays mounted (hidden) so PTY-backed panes are not recreated.
     expect(pane).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Switch to Vibe mode" }));
+    await userEvent.click(screen.getByRole("button", { name: "切换到 Vibe 模式" }));
 
     expect(screen.getByTestId("terminal-pane-term-1")).toBe(pane);
     expect(screen.getByRole("button", { name: "Fix terminal bug" })).toBeInTheDocument();
@@ -439,7 +439,7 @@ describe("VibeScreen", () => {
     renderScreen();
 
     await expandProjectDirectory();
-    await userEvent.click(await screen.findByRole("button", { name: /Resume Fix terminal bug/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /恢复 Fix terminal bug/ }));
     await screen.findByTestId("terminal-pane-term-1");
 
     await waitFor(() => {
@@ -448,7 +448,7 @@ describe("VibeScreen", () => {
       expect(stored).toContain('"active":true');
     });
 
-    await userEvent.click(screen.getByRole("button", { name: "Close Fix terminal bug" }));
+    await userEvent.click(screen.getByRole("button", { name: "关闭 Fix terminal bug" }));
 
     await waitFor(() =>
       expect(window.localStorage.getItem(VIBE_TABS_STORAGE_KEY)).toBeNull(),
@@ -492,16 +492,16 @@ describe("VibeScreen", () => {
   it("collapses and restores the session list from the rail control", async () => {
     const view = renderScreen();
 
-    await screen.findByRole("button", { name: "Expand folder D:/repo/app" });
-    const collapse = screen.getByRole("button", { name: "Collapse session list" });
+    await screen.findByRole("button", { name: "展开文件夹 D:/repo/app" });
+    const collapse = screen.getByRole("button", { name: "收起会话列表" });
     expect(collapse).toHaveAttribute("aria-expanded", "true");
 
     await userEvent.click(collapse);
 
     expect(
-      screen.queryByRole("button", { name: "Expand folder D:/repo/app" }),
+      screen.queryByRole("button", { name: "展开文件夹 D:/repo/app" }),
     ).not.toBeInTheDocument();
-    const expand = screen.getByRole("button", { name: "Expand session list" });
+    const expand = screen.getByRole("button", { name: "展开会话列表" });
     expect(expand).toHaveAttribute("aria-expanded", "false");
     await waitFor(() =>
       expect(window.localStorage.getItem(VIBE_APPEARANCE_STORAGE_KEY)).toContain(
@@ -513,20 +513,20 @@ describe("VibeScreen", () => {
     renderScreen();
 
     expect(
-      await screen.findByRole("button", { name: "Expand session list" }),
+      await screen.findByRole("button", { name: "展开会话列表" }),
     ).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Expand session list" }));
+    await userEvent.click(screen.getByRole("button", { name: "展开会话列表" }));
 
     expect(
-      await screen.findByRole("button", { name: "Expand folder D:/repo/app" }),
+      await screen.findByRole("button", { name: "展开文件夹 D:/repo/app" }),
     ).toBeInTheDocument();
   });
 
   it("resizes the session list from the rail drag gutter and persists the width", async () => {
     const view = renderScreen();
 
-    await screen.findByRole("button", { name: "Expand folder D:/repo/app" });
+    await screen.findByRole("button", { name: "展开文件夹 D:/repo/app" });
     const shell = screen.getByRole("main");
     const handle = screen.getByTestId("vibe-session-resize-handle");
     expect(shell.style.getPropertyValue("--vibe-session-list-width")).toBe("356px");
@@ -552,7 +552,7 @@ describe("VibeScreen", () => {
     view.unmount();
     renderScreen();
 
-    await screen.findByRole("button", { name: "Expand folder D:/repo/app" });
+    await screen.findByRole("button", { name: "展开文件夹 D:/repo/app" });
     expect(
       screen.getByRole("main").style.getPropertyValue("--vibe-session-list-width"),
     ).toBe("560px");
@@ -561,7 +561,7 @@ describe("VibeScreen", () => {
   it("floats the session list as a drawer when the window gets narrow", async () => {
     renderScreen();
 
-    await screen.findByRole("button", { name: "Expand folder D:/repo/app" });
+    await screen.findByRole("button", { name: "展开文件夹 D:/repo/app" });
     expect(screen.getByTestId("vibe-session-list")).not.toHaveClass("vibe-session-drawer");
     expect(screen.getByTestId("vibe-body-grid")).toHaveClass(
       "grid-cols-[var(--vibe-session-list-width)_20px_minmax(0,1fr)]",
@@ -571,7 +571,7 @@ describe("VibeScreen", () => {
 
     expect(screen.queryByTestId("vibe-session-list")).not.toBeInTheDocument();
     expect(screen.getByTestId("vibe-body-grid")).toHaveClass("grid-cols-[20px_minmax(0,1fr)]");
-    const expand = screen.getByRole("button", { name: "Expand session list" });
+    const expand = screen.getByRole("button", { name: "展开会话列表" });
     expect(expand).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByTestId("vibe-session-resize-handle")).not.toBeInTheDocument();
 
@@ -579,7 +579,7 @@ describe("VibeScreen", () => {
 
     const drawer = screen.getByTestId("vibe-session-list");
     expect(drawer).toHaveClass("vibe-session-drawer");
-    expect(screen.getByRole("button", { name: "Expand folder D:/repo/app" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "展开文件夹 D:/repo/app" })).toBeInTheDocument();
     // The floating drawer must not rewrite the wide-layout collapse preference.
     expect(window.localStorage.getItem(VIBE_APPEARANCE_STORAGE_KEY)).toContain(
       '"sessionListCollapsed":false',
@@ -589,16 +589,16 @@ describe("VibeScreen", () => {
 
     expect(screen.queryByTestId("vibe-session-list")).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Expand session list" }));
+    await userEvent.click(screen.getByRole("button", { name: "展开会话列表" }));
     expect(screen.getByTestId("vibe-session-list")).toBeInTheDocument();
 
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByTestId("vibe-session-list")).not.toBeInTheDocument();
 
     // Resuming from the drawer must uncover the workspace it floats over.
-    await userEvent.click(screen.getByRole("button", { name: "Expand session list" }));
+    await userEvent.click(screen.getByRole("button", { name: "展开会话列表" }));
     await expandProjectDirectory();
-    await userEvent.click(await screen.findByRole("button", { name: /Resume Fix terminal bug/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /恢复 Fix terminal bug/ }));
     await screen.findByTestId("terminal-pane-term-1");
     expect(screen.queryByTestId("vibe-session-list")).not.toBeInTheDocument();
 
@@ -612,24 +612,24 @@ describe("VibeScreen", () => {
   it("keeps the collapsed wide layout when the window widens again", async () => {
     renderScreen();
 
-    await screen.findByRole("button", { name: "Expand folder D:/repo/app" });
-    await userEvent.click(screen.getByRole("button", { name: "Collapse session list" }));
+    await screen.findByRole("button", { name: "展开文件夹 D:/repo/app" });
+    await userEvent.click(screen.getByRole("button", { name: "收起会话列表" }));
 
     setViewportWidth(880);
-    await userEvent.click(screen.getByRole("button", { name: "Expand session list" }));
+    await userEvent.click(screen.getByRole("button", { name: "展开会话列表" }));
     expect(screen.getByTestId("vibe-session-list")).toHaveClass("vibe-session-drawer");
 
     setViewportWidth(1280);
 
     expect(screen.queryByTestId("vibe-session-list")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Expand session list" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "展开会话列表" })).toBeInTheDocument();
   });
 
   it("tiles terminals horizontally from the tab bar context menu", async () => {
     const view = renderScreen();
 
     await expandProjectDirectory();
-    await userEvent.click(await screen.findByRole("button", { name: /Resume Fix terminal bug/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /恢复 Fix terminal bug/ }));
     await screen.findByTestId("terminal-pane-term-1");
     expect(screen.queryByTestId("vibe-tiled-terminals")).not.toBeInTheDocument();
 
@@ -637,9 +637,9 @@ describe("VibeScreen", () => {
       ?.parentElement as HTMLElement;
     await userEvent.pointer({ keys: "[MouseRight]", target: tabBar });
 
-    const menu = screen.getByRole("menu", { name: "Terminal tab options" });
+    const menu = screen.getByRole("menu", { name: "终端标签选项" });
     await userEvent.click(
-      screen.getByRole("menuitem", { name: "Enable tiled layout" }),
+      screen.getByRole("menuitem", { name: "开启平铺模式" }),
     );
 
     expect(menu).not.toBeInTheDocument();
@@ -665,7 +665,7 @@ describe("VibeScreen", () => {
       target: screen.getByRole("button", { name: "Fix terminal bug" }).parentElement
         ?.parentElement as HTMLElement,
     });
-    await userEvent.click(screen.getByRole("menuitem", { name: "Disable tiled layout" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "关闭平铺模式" }));
 
     expect(screen.queryByTestId("vibe-tiled-terminals")).not.toBeInTheDocument();
   });
@@ -674,7 +674,7 @@ describe("VibeScreen", () => {
     const view = renderScreen();
 
     await expandProjectDirectory();
-    await userEvent.click(await screen.findByRole("button", { name: /Resume Fix terminal bug/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /恢复 Fix terminal bug/ }));
     await screen.findByTestId("terminal-pane-term-1");
 
     await userEvent.pointer({
@@ -682,21 +682,21 @@ describe("VibeScreen", () => {
       target: screen.getByRole("button", { name: "Fix terminal bug" }).parentElement
         ?.parentElement as HTMLElement,
     });
-    await userEvent.click(screen.getByRole("menuitem", { name: "Enable tiled layout" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "开启平铺模式" }));
 
     const tiled = screen.getByTestId("vibe-tiled-terminals");
     expect(tiled).toHaveClass("vibe-scrollbar-active");
     expect(screen.getByRole("main").style.getPropertyValue("--vibe-tile-width")).toBe("448px");
 
-    await userEvent.click(screen.getByRole("button", { name: "Tab layout settings" }));
-    const dialog = await screen.findByRole("dialog", { name: "Tab layout" });
+    await userEvent.click(screen.getByRole("button", { name: "标签布局设置" }));
+    const dialog = await screen.findByRole("dialog", { name: "标签布局" });
     // Range inputs do not respond to typing, so the slider value is set directly.
-    fireEvent.change(screen.getByLabelText("Tiled terminal width"), {
+    fireEvent.change(screen.getByLabelText("平铺终端宽度"), {
       target: { value: "640" },
     });
 
     expect(screen.getByRole("main").style.getPropertyValue("--vibe-tile-width")).toBe("640px");
-    expect(dialog).toHaveTextContent("640 px");
+    expect(dialog).toHaveTextContent("640 像素");
 
     await waitFor(() =>
       expect(window.localStorage.getItem(VIBE_APPEARANCE_STORAGE_KEY)).toContain(
@@ -714,15 +714,15 @@ describe("VibeScreen", () => {
     renderScreen();
 
     await expandProjectDirectory();
-    await userEvent.click(await screen.findByRole("button", { name: /Resume Fix terminal bug/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /恢复 Fix terminal bug/ }));
     const tab = (await screen.findByRole("button", { name: "Fix terminal bug" }))
       .parentElement as HTMLElement;
     expect(tab).toHaveClass("min-w-[132px]");
 
-    await userEvent.click(screen.getByRole("button", { name: "Tab layout settings" }));
-    await screen.findByRole("dialog", { name: "Tab layout" });
-    await userEvent.click(screen.getByRole("checkbox", { name: "Fit tab width to its title" }));
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await userEvent.click(screen.getByRole("button", { name: "标签布局设置" }));
+    await screen.findByRole("dialog", { name: "标签布局" });
+    await userEvent.click(screen.getByRole("checkbox", { name: "标签宽度随标题自适应" }));
+    await userEvent.click(screen.getByRole("button", { name: "关闭" }));
 
     expect(
       (screen.getByRole("button", { name: "Fix terminal bug" }).parentElement as HTMLElement)
@@ -739,7 +739,7 @@ describe("VibeScreen", () => {
     renderScreen();
 
     await expandProjectDirectory();
-    await userEvent.click(await screen.findByRole("button", { name: /Resume Fix terminal bug/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /恢复 Fix terminal bug/ }));
     await screen.findByTestId("terminal-pane-term-1");
 
     const dot = screen.getByTestId("vibe-tab-status-term-1");
@@ -749,21 +749,21 @@ describe("VibeScreen", () => {
     expect(screen.getByTestId("vibe-tab-status-term-1")).toHaveClass("bg-amber-500");
     expect(
       screen.getByTestId("vibe-tab-status-term-1").closest("div[title]"),
-    ).toHaveAttribute("title", "Fix terminal bug · exited · exit code 3");
+    ).toHaveAttribute("title", "Fix terminal bug · 已退出 · 退出码 3");
 
     await userEvent.click(screen.getByTestId("terminal-exit-clean-term-1"));
     expect(screen.getByTestId("vibe-tab-status-term-1")).toHaveClass("bg-slate-400");
     expect(
       screen.getByTestId("vibe-tab-status-term-1").closest("div[title]"),
-    ).toHaveAttribute("title", "Fix terminal bug · exited · exit code 0");
+    ).toHaveAttribute("title", "Fix terminal bug · 已退出 · 退出码 0");
   });
 
   it("scrolls the tab strip with the arrow buttons once the tabs overflow", async () => {
     renderScreen();
 
     const strip = await screen.findByTestId("vibe-tab-strip");
-    const scrollLeftArrow = screen.getByRole("button", { name: "Scroll tabs left" });
-    const scrollRightArrow = screen.getByRole("button", { name: "Scroll tabs right" });
+    const scrollLeftArrow = screen.getByRole("button", { name: "向左滚动标签" });
+    const scrollRightArrow = screen.getByRole("button", { name: "向右滚动标签" });
 
     // jsdom has no layout, so the strip metrics are stubbed to simulate overflow.
     expect(scrollLeftArrow).toBeDisabled();
@@ -798,10 +798,10 @@ describe("VibeScreen", () => {
   it("renders the empty-state launch composer with agent and routing controls", async () => {
     renderScreen();
 
-    expect(await screen.findByPlaceholderText("Send a message...")).toBeInTheDocument();
-    await screen.findByRole("button", { name: "Expand folder D:/repo/app" });
-    expect(screen.getByText("Start or resume a session")).toBeInTheDocument();
-    expect(screen.getByText("Agent (full access)")).toBeInTheDocument();
+    expect(await screen.findByPlaceholderText("发送消息...")).toBeInTheDocument();
+    await screen.findByRole("button", { name: "展开文件夹 D:/repo/app" });
+    expect(screen.getByText("启动或恢复一个会话")).toBeInTheDocument();
+    expect(screen.getByText("智能体（完全访问）")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Codex" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Claude" })).toHaveAttribute(
       "aria-pressed",
@@ -811,24 +811,24 @@ describe("VibeScreen", () => {
     expect(screen.getByRole("button", { name: "OpenCode" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "OpenClaw" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Hermes" })).toBeInTheDocument();
-    const folderSelect = screen.getByLabelText("Folder");
+    const folderSelect = screen.getByLabelText("文件夹");
     expect(folderSelect).toHaveClass("truncate");
     expect(folderSelect.closest("label")).toHaveClass("sm:max-w-[18rem]");
     expect(folderSelect).toHaveTextContent("repo/app");
-    expect(folderSelect).toHaveTextContent("New folder...");
-    expect(screen.getByLabelText("Model")).toHaveValue("auto");
-    expect(screen.getByLabelText("Reasoning")).toHaveValue("auto");
-    expect(screen.getByRole("button", { name: "Start" })).toHaveClass("sm:ml-auto");
+    expect(folderSelect).toHaveTextContent("新文件夹...");
+    expect(screen.getByLabelText("模型")).toHaveValue("auto");
+    expect(screen.getByLabelText("推理程度")).toHaveValue("auto");
+    expect(screen.getByRole("button", { name: "启动" })).toHaveClass("sm:ml-auto");
   });
 
   it("creates a new agent session from the empty-state launch composer", async () => {
     renderScreen();
 
-    await screen.findByPlaceholderText("Send a message...");
-    await screen.findByRole("button", { name: "Expand folder D:/repo/app" });
-    await userEvent.selectOptions(screen.getByLabelText("Folder"), "D:/repo/app");
+    await screen.findByPlaceholderText("发送消息...");
+    await screen.findByRole("button", { name: "展开文件夹 D:/repo/app" });
+    await userEvent.selectOptions(screen.getByLabelText("文件夹"), "D:/repo/app");
     await userEvent.click(screen.getByRole("button", { name: "Claude" }));
-    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await userEvent.click(screen.getByRole("button", { name: "启动" }));
 
     await waitFor(() =>
       expect(createTerminalSession).toHaveBeenCalledWith({
@@ -848,8 +848,8 @@ describe("VibeScreen", () => {
   it("fills the composer model and reasoning selects from the agent launch catalog", async () => {
     renderScreen();
 
-    await screen.findByPlaceholderText("Send a message...");
-    const modelSelect = screen.getByLabelText("Model") as HTMLSelectElement;
+    await screen.findByPlaceholderText("发送消息...");
+    const modelSelect = screen.getByLabelText("模型") as HTMLSelectElement;
     await screen.findByRole("option", { name: "gpt-5.6-sol" });
     expect(Array.from(modelSelect.options).map((option) => option.value)).toEqual([
       "auto",
@@ -857,7 +857,7 @@ describe("VibeScreen", () => {
       "gpt-5.6-codex",
     ]);
 
-    const reasoningSelect = screen.getByLabelText("Reasoning") as HTMLSelectElement;
+    const reasoningSelect = screen.getByLabelText("推理程度") as HTMLSelectElement;
     expect(reasoningSelect).toBeDisabled();
 
     await userEvent.selectOptions(modelSelect, "gpt-5.6-sol");
@@ -869,8 +869,8 @@ describe("VibeScreen", () => {
     ]);
 
     await userEvent.selectOptions(reasoningSelect, "high");
-    await userEvent.selectOptions(screen.getByLabelText("Folder"), "D:/repo/app");
-    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await userEvent.selectOptions(screen.getByLabelText("文件夹"), "D:/repo/app");
+    await userEvent.click(screen.getByRole("button", { name: "启动" }));
 
     await waitFor(() =>
       expect(createTerminalSession).toHaveBeenCalledWith({
@@ -890,16 +890,16 @@ describe("VibeScreen", () => {
   it("resets the model selection when the chosen agent does not advertise it", async () => {
     renderScreen();
 
-    await screen.findByPlaceholderText("Send a message...");
+    await screen.findByPlaceholderText("发送消息...");
     await screen.findByRole("option", { name: "gpt-5.6-sol" });
-    await userEvent.selectOptions(screen.getByLabelText("Model"), "gpt-5.6-sol");
-    await userEvent.selectOptions(screen.getByLabelText("Reasoning"), "high");
+    await userEvent.selectOptions(screen.getByLabelText("模型"), "gpt-5.6-sol");
+    await userEvent.selectOptions(screen.getByLabelText("推理程度"), "high");
 
     await userEvent.click(screen.getByRole("button", { name: "Claude" }));
 
-    await waitFor(() => expect(screen.getByLabelText("Model")).toHaveValue("auto"));
-    expect(screen.getByLabelText("Reasoning")).toHaveValue("auto");
-    expect(screen.getByLabelText("Reasoning")).toBeDisabled();
+    await waitFor(() => expect(screen.getByLabelText("模型")).toHaveValue("auto"));
+    expect(screen.getByLabelText("推理程度")).toHaveValue("auto");
+    expect(screen.getByLabelText("推理程度")).toBeDisabled();
   });
 
   it("blocks launching an agent whose CLI is missing and offers the install command", async () => {
@@ -911,18 +911,18 @@ describe("VibeScreen", () => {
 
     renderScreen();
 
-    await screen.findByPlaceholderText("Send a message...");
+    await screen.findByPlaceholderText("发送消息...");
     await userEvent.click(screen.getByRole("button", { name: "Grok" }));
 
     expect(
-      await screen.findByText("Grok CLI is not installed. Install it, then reopen this panel."),
+      await screen.findByText("Grok 命令行未安装，请先安装后再打开此面板。"),
     ).toBeInTheDocument();
     expect(screen.getByText("npm install -g @vibe-kit/grok-cli")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Start" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "启动" })).toBeDisabled();
 
-    await userEvent.click(screen.getByRole("button", { name: "Copy install command" }));
+    await userEvent.click(screen.getByRole("button", { name: "复制安装命令" }));
     expect(writeText).toHaveBeenCalledWith("npm install -g @vibe-kit/grok-cli");
-    expect(await screen.findByRole("button", { name: "Copied" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "已复制" })).toBeInTheDocument();
 
     expect(createTerminalSession).not.toHaveBeenCalled();
   });
@@ -935,7 +935,7 @@ describe("VibeScreen", () => {
     const notice = await screen.findByTestId("vibe-agent-catalog-error", undefined, {
       timeout: 5000,
     });
-    expect(notice).toHaveTextContent("Could not load the agent list: sidecar offline");
+    expect(notice).toHaveTextContent("无法读取智能体列表：sidecar offline");
     expect(screen.getByRole("button", { name: "Codex" })).toBeInTheDocument();
   });
 
@@ -949,33 +949,33 @@ describe("VibeScreen", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("button", { name: "Light" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "亮色" })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Light" }));
+    await userEvent.click(screen.getByRole("button", { name: "亮色" }));
 
-    expect(screen.getByRole("button", { name: "Switch Vibe theme" })).toHaveTextContent("Light");
-    const lightFolderToggle = screen.getByRole("button", { name: "Expand folder D:/repo/app" });
+    expect(screen.getByRole("button", { name: "切换 Vibe 主题" })).toHaveTextContent("亮色");
+    const lightFolderToggle = screen.getByRole("button", { name: "展开文件夹 D:/repo/app" });
     expect(lightFolderToggle).toHaveClass("vibe-light-list-trigger");
     expect(lightFolderToggle.parentElement).toHaveClass("vibe-light-group-panel");
-    expect(screen.getByText("No terminal tabs yet.").parentElement).toHaveClass("vibe-light-tabbar");
+    expect(screen.getByText("还没有终端标签。").parentElement).toHaveClass("vibe-light-tabbar");
     expect(screen.getByTestId("vibe-tab-strip").parentElement).toHaveClass("vibe-light-workspace");
-    expect(screen.getByText("Start or resume a session")).toHaveClass("text-stone-900");
+    expect(screen.getByText("启动或恢复一个会话")).toHaveClass("text-stone-900");
 
-    await userEvent.click(screen.getByRole("button", { name: "Skin" }));
+    await userEvent.click(screen.getByRole("button", { name: "皮肤" }));
 
-    expect(screen.getByRole("button", { name: "Switch Vibe theme" })).toHaveTextContent("Skin");
-    expect(screen.getByLabelText("Vibe skin")).toHaveValue("codex-2007-blue");
-    expect(screen.getByText("No terminal tabs yet.").parentElement).toHaveClass("vibe-skin-tabbar");
+    expect(screen.getByRole("button", { name: "切换 Vibe 主题" })).toHaveTextContent("皮肤");
+    expect(screen.getByLabelText("Vibe 皮肤")).toHaveValue("codex-2007-blue");
+    expect(screen.getByText("还没有终端标签。").parentElement).toHaveClass("vibe-skin-tabbar");
   });
 
   it("persists the skin audio toggle from the appearance dialog", async () => {
     const view = renderScreen();
 
     await openAppearanceDialog();
-    const audioToggle = screen.getByLabelText("Skin sound effects");
+    const audioToggle = screen.getByLabelText("皮肤音效");
     expect(audioToggle).toBeChecked();
 
     await userEvent.click(audioToggle);
@@ -991,23 +991,23 @@ describe("VibeScreen", () => {
     renderScreen();
     await openAppearanceDialog();
 
-    expect(screen.getByLabelText("Skin sound effects")).not.toBeChecked();
+    expect(screen.getByLabelText("皮肤音效")).not.toBeChecked();
   });
 
   it("uses cohesive dark colors for the session list and tabs", async () => {
     renderScreen();
 
-    expect(screen.getByText("No terminal tabs yet.").parentElement).toHaveClass("vibe-dark-tabbar");
+    expect(screen.getByText("还没有终端标签。").parentElement).toHaveClass("vibe-dark-tabbar");
 
     const folderToggle = await screen.findByRole("button", {
-      name: "Expand folder D:/repo/app",
+      name: "展开文件夹 D:/repo/app",
     });
     expect(folderToggle).toHaveClass("vibe-dark-list-trigger");
     expect(folderToggle.parentElement).toHaveClass("vibe-dark-group-panel");
 
     await userEvent.click(folderToggle);
 
-    const resumableSession = screen.getByRole("button", { name: /Resume Fix terminal bug/ });
+    const resumableSession = screen.getByRole("button", { name: /恢复 Fix terminal bug/ });
     expect(resumableSession).toHaveClass("vibe-dark-session-card");
     expect(screen.getByText("codex · codex resume s1")).toHaveClass("vibe-dark-session-meta");
 
@@ -1016,7 +1016,7 @@ describe("VibeScreen", () => {
     const tabButton = await screen.findByRole("button", { name: "Fix terminal bug" });
     expect(tabButton).toHaveClass("vibe-tab-trigger");
     expect(tabButton.parentElement).toHaveClass("vibe-dark-tab-active");
-    const closeButton = screen.getByRole("button", { name: "Close Fix terminal bug" });
+    const closeButton = screen.getByRole("button", { name: "关闭 Fix terminal bug" });
     expect(closeButton).toHaveClass("vibe-dark-tab-close");
     expect(closeButton).not.toHaveClass("rounded-md");
   });
@@ -1024,20 +1024,20 @@ describe("VibeScreen", () => {
   it("uses cohesive light colors for the session list and tabs", async () => {
     renderScreen();
 
-    await switchThemeFromAppearance("Light");
+    await switchThemeFromAppearance("亮色");
 
-    expect(screen.getByText("No terminal tabs yet.").parentElement).toHaveClass("vibe-light-tabbar");
+    expect(screen.getByText("还没有终端标签。").parentElement).toHaveClass("vibe-light-tabbar");
     expect(screen.getByTestId("vibe-tab-strip").parentElement).toHaveClass("vibe-light-workspace");
 
     const folderToggle = await screen.findByRole("button", {
-      name: "Expand folder D:/repo/app",
+      name: "展开文件夹 D:/repo/app",
     });
     expect(folderToggle).toHaveClass("vibe-light-list-trigger");
     expect(folderToggle.parentElement).toHaveClass("vibe-light-group-panel");
 
     await userEvent.click(folderToggle);
 
-    const resumableSession = screen.getByRole("button", { name: /Resume Fix terminal bug/ });
+    const resumableSession = screen.getByRole("button", { name: /恢复 Fix terminal bug/ });
     expect(resumableSession).toHaveClass("vibe-light-session-card");
     expect(screen.getByText("codex · codex resume s1")).toHaveClass("vibe-light-session-meta");
 
@@ -1046,7 +1046,7 @@ describe("VibeScreen", () => {
     const tabButton = await screen.findByRole("button", { name: "Fix terminal bug" });
     expect(tabButton).toHaveClass("vibe-tab-trigger");
     expect(tabButton.parentElement).toHaveClass("vibe-light-tab-active");
-    const closeButton = screen.getByRole("button", { name: "Close Fix terminal bug" });
+    const closeButton = screen.getByRole("button", { name: "关闭 Fix terminal bug" });
     expect(closeButton).toHaveClass("vibe-light-tab-close");
     expect(closeButton).not.toHaveClass("rounded-md");
   });
@@ -1088,9 +1088,9 @@ describe("VibeScreen", () => {
 
     await switchToSkinTheme();
     await openAppearanceDialog();
-    await userEvent.selectOptions(screen.getByLabelText("Vibe skin"), "rescue-pups-adventure-bay");
+    await userEvent.selectOptions(screen.getByLabelText("Vibe 皮肤"), "rescue-pups-adventure-bay");
 
-    expect(screen.getByLabelText("Vibe skin")).toHaveValue("rescue-pups-adventure-bay");
+    expect(screen.getByLabelText("Vibe 皮肤")).toHaveValue("rescue-pups-adventure-bay");
     expect(screen.getByText("汪汪队终端救援站")).toBeInTheDocument();
     expect(screen.getByText("冒险湾主题")).toBeInTheDocument();
     expect(screen.getByText("救援待命")).toBeInTheDocument();
@@ -1121,9 +1121,9 @@ describe("VibeScreen", () => {
 
     await switchToSkinTheme();
     await openAppearanceDialog();
-    await userEvent.selectOptions(screen.getByLabelText("Vibe skin"), "starship-cockpit");
+    await userEvent.selectOptions(screen.getByLabelText("Vibe 皮肤"), "starship-cockpit");
 
-    expect(screen.getByLabelText("Vibe skin")).toHaveValue("starship-cockpit");
+    expect(screen.getByLabelText("Vibe 皮肤")).toHaveValue("starship-cockpit");
     expect(screen.getByText("星舰驾驶舱 - Vibe 终端")).toBeInTheDocument();
     expect(screen.getByText("深空跃迁 / 指令甲板")).toBeInTheDocument();
     expect(screen.getByText("舰桥 AI 核心")).toBeInTheDocument();
@@ -1181,7 +1181,7 @@ describe("VibeScreen", () => {
 
     await switchToSkinTheme();
     await openAppearanceDialog();
-    await userEvent.selectOptions(screen.getByLabelText("Vibe skin"), "starship-cockpit");
+    await userEvent.selectOptions(screen.getByLabelText("Vibe 皮肤"), "starship-cockpit");
 
     await waitFor(() =>
       expect(window.localStorage.getItem(VIBE_APPEARANCE_STORAGE_KEY)).toContain(
@@ -1192,13 +1192,13 @@ describe("VibeScreen", () => {
     view.unmount();
     renderScreen();
 
-    expect(await screen.findByRole("button", { name: "Switch Vibe theme" })).toHaveTextContent(
-      "Skin",
+    expect(await screen.findByRole("button", { name: "切换 Vibe 主题" })).toHaveTextContent(
+      "皮肤",
     );
     expect(await screen.findByText("星舰驾驶舱 - Vibe 终端")).toBeInTheDocument();
 
     await openAppearanceDialog();
-    expect(screen.getByLabelText("Vibe skin")).toHaveValue("starship-cockpit");
+    expect(screen.getByLabelText("Vibe 皮肤")).toHaveValue("starship-cockpit");
   });
 
   it("renders custom rescue-style decorations from a stored skin package manifest", async () => {
@@ -1270,8 +1270,8 @@ describe("VibeScreen", () => {
     await switchToSkinTheme();
     await openAppearanceDialog();
 
-    expect(screen.getByLabelText("Vibe skin")).toHaveValue("uploaded-rescue");
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByLabelText("Vibe 皮肤")).toHaveValue("uploaded-rescue");
+    await userEvent.click(screen.getByRole("button", { name: "取消" }));
 
     expect(document.querySelector(".vibe-skin--rescue-pups")).toBeTruthy();
     expect(screen.getByText("上传救援主题")).toBeInTheDocument();
@@ -1290,12 +1290,12 @@ describe("VibeScreen", () => {
     renderScreen();
 
     expect(
-      await screen.findByRole("button", { name: "Expand folder D:/repo/app" }),
+      await screen.findByRole("button", { name: "展开文件夹 D:/repo/app" }),
     ).toBeInTheDocument();
     expect(screen.queryByText("Codex 好友")).not.toBeInTheDocument();
     expect(screen.queryByTestId("vibe-window-controls")).not.toBeInTheDocument();
 
-    await switchThemeFromAppearance("Light");
+    await switchThemeFromAppearance("亮色");
 
     expect(screen.queryByText("Codex 好友")).not.toBeInTheDocument();
     expect(screen.queryByTestId("vibe-window-controls")).not.toBeInTheDocument();
@@ -1358,7 +1358,7 @@ describe("VibeScreen", () => {
     await switchToSkinTheme();
 
     await openAppearanceDialog();
-    expect(screen.getByLabelText("Vibe skin")).toHaveValue("showcase-skin");
+    expect(screen.getByLabelText("Vibe 皮肤")).toHaveValue("showcase-skin");
     expect(screen.getByText("霓虹终端")).toBeInTheDocument();
     expect(screen.getByText("霓虹用户")).toBeInTheDocument();
     expect(screen.getByText("忙碌")).toBeInTheDocument();
@@ -1451,15 +1451,15 @@ describe("VibeScreen", () => {
     );
 
     await openAppearanceDialog();
-    await userEvent.upload(screen.getByLabelText("Choose Vibe skin package"), skinFile);
+    await userEvent.upload(screen.getByLabelText("选择 Vibe 皮肤包"), skinFile);
 
-    await waitFor(() => expect(screen.getByLabelText("Vibe skin")).toHaveValue("custom-neon"));
-    expect(screen.getByRole("button", { name: "Switch Vibe theme" })).toHaveTextContent("Skin");
+    await waitFor(() => expect(screen.getByLabelText("Vibe 皮肤")).toHaveValue("custom-neon"));
+    expect(screen.getByRole("button", { name: "切换 Vibe 主题" })).toHaveTextContent("皮肤");
     expect(window.localStorage.getItem(VIBE_SKIN_STORAGE_KEY)).toContain("Custom Neon");
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "取消" }));
     await expandProjectDirectory();
-    await userEvent.click(await screen.findByRole("button", { name: /Resume Fix terminal bug/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /恢复 Fix terminal bug/ }));
 
     expect(await screen.findByTestId("terminal-pane-term-1")).toHaveAttribute(
       "data-theme-override",
@@ -1581,7 +1581,7 @@ describe("VibeScreen", () => {
     await userEvent.click(screen.getByRole("button", { name: "开始" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "外观设置" }));
 
-    expect(await screen.findByRole("dialog", { name: "Appearance" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "外观" })).toBeInTheDocument();
     expect(screen.queryByRole("menu", { name: "开始菜单" })).not.toBeInTheDocument();
   });
 
@@ -1608,37 +1608,37 @@ describe("VibeScreen", () => {
     );
     renderScreen();
 
-    expect(screen.queryByLabelText("Vibe skin")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Import skin" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Vibe 皮肤")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "导入皮肤" })).not.toBeInTheDocument();
 
     await openAppearanceDialog();
 
-    const dialog = screen.getByRole("dialog", { name: "Appearance" });
-    expect(dialog).toContainElement(screen.getByLabelText("Vibe skin"));
-    expect(dialog).toContainElement(screen.getByRole("button", { name: "Import skin" }));
-    expect(dialog).toContainElement(screen.getByRole("button", { name: "Clear custom skin" }));
+    const dialog = screen.getByRole("dialog", { name: "外观" });
+    expect(dialog).toContainElement(screen.getByLabelText("Vibe 皮肤"));
+    expect(dialog).toContainElement(screen.getByRole("button", { name: "导入皮肤" }));
+    expect(dialog).toContainElement(screen.getByRole("button", { name: "清除自定义皮肤" }));
 
-    await userEvent.selectOptions(screen.getByLabelText("Vibe skin"), "codex-2007-blue");
-    expect(screen.getByLabelText("Vibe skin")).toHaveValue("codex-2007-blue");
+    await userEvent.selectOptions(screen.getByLabelText("Vibe 皮肤"), "codex-2007-blue");
+    expect(screen.getByLabelText("Vibe 皮肤")).toHaveValue("codex-2007-blue");
 
-    await userEvent.click(screen.getByRole("button", { name: "Clear custom skin" }));
+    await userEvent.click(screen.getByRole("button", { name: "清除自定义皮肤" }));
     expect(window.localStorage.getItem(VIBE_SKIN_STORAGE_KEY)).toBeNull();
   });
 
   it("creates a new agent session through the modal", async () => {
     renderScreen();
 
-    await userEvent.click(await screen.findByRole("button", { name: "New session" }));
-    await screen.findByRole("dialog", { name: "Create session" });
-    const existingFolderSelect = screen.getByLabelText("Existing folder") as HTMLSelectElement;
+    await userEvent.click(await screen.findByRole("button", { name: "新建会话" }));
+    await screen.findByRole("dialog", { name: "创建会话" });
+    const existingFolderSelect = screen.getByLabelText("已有文件夹") as HTMLSelectElement;
     const existingFolderOption = Array.from(existingFolderSelect.options).find(
       (option) => option.value === "D:/repo/app",
     );
     expect(existingFolderOption).toHaveTextContent("repo/app");
     expect(existingFolderOption).not.toHaveTextContent("D:/repo/app");
     await userEvent.selectOptions(existingFolderSelect, "D:/repo/app");
-    await userEvent.selectOptions(screen.getByLabelText("Agent"), "claude");
-    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await userEvent.selectOptions(screen.getByLabelText("智能体"), "claude");
+    await userEvent.click(screen.getByRole("button", { name: "创建" }));
 
     await waitFor(() =>
       expect(createTerminalSession).toHaveBeenCalledWith({

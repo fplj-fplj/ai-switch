@@ -65,7 +65,7 @@ function exportResult(
   };
 }
 
-function renderDialog(open = true, language: "en" | "zh-CN" = "en") {
+function renderDialog(open = true) {
   return render(
     <RouteCredentialExportDialog
       open={open}
@@ -74,7 +74,9 @@ function renderDialog(open = true, language: "en" | "zh-CN" = "en") {
       onClose={vi.fn()}
     />,
     {
-      wrapper: ({ children }) => <I18nProvider initialLanguage={language}>{children}</I18nProvider>,
+      wrapper: ({ children }) => (
+        <I18nProvider initialLanguage="zh-CN">{children}</I18nProvider>
+      ),
     },
   );
 }
@@ -105,7 +107,7 @@ describe("RouteCredentialExportDialog", () => {
       include_enhanced_metadata: true,
     });
 
-    await userEvent.click(screen.getByRole("checkbox", { name: "Include enhanced metadata" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "包含增强元数据" }));
 
     await waitFor(() => {
       expect(exportRouteCredentials).toHaveBeenCalledTimes(2);
@@ -140,19 +142,19 @@ describe("RouteCredentialExportDialog", () => {
     renderDialog();
 
     expect(await screen.findByText(jsonText.trim())).toBeInTheDocument();
-    expect(screen.getByText(/contains credentials/i)).toBeInTheDocument();
+    expect(screen.getByText(/此导出内容包含凭据/)).toBeInTheDocument();
     expect(screen.getByText("Legacy API")).toBeInTheDocument();
     expect(screen.getByText("transfer.scheme_unsupported")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("tab", { name: "Scheme links" }));
+    await userEvent.click(screen.getByRole("tab", { name: "方案链接" }));
 
     expect(screen.getByText("ccswitch://import?api_key=secret")).toBeInTheDocument();
-    expect(screen.getByText(/API keys.*system clipboard/i)).toBeInTheDocument();
+    expect(screen.getByText(/复制方案链接会将 API 密钥放入系统剪贴板/)).toBeInTheDocument();
     expect(screen.getByText("Production API")).toBeInTheDocument();
   });
 
   it("renders export controls in Chinese", async () => {
-    renderDialog(true, "zh-CN");
+    renderDialog(true);
 
     expect(await screen.findByRole("heading", { name: "导出路由凭据" })).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "包含增强元数据" })).toBeInTheDocument();
@@ -167,13 +169,13 @@ describe("RouteCredentialExportDialog", () => {
     renderDialog();
 
     await screen.findByText(jsonText.trim());
-    await userEvent.click(screen.getByRole("tab", { name: "Scheme links" }));
+    await userEvent.click(screen.getByRole("tab", { name: "方案链接" }));
     await userEvent.click(
-      screen.getByRole("button", { name: "Copy scheme URL for Production API" }),
+      screen.getByRole("button", { name: "复制 Production API 的方案链接" }),
     );
 
     expect(confirm).toHaveBeenCalledWith(
-      "This scheme URL contains an API key. Copy it to the system clipboard?",
+      "此方案链接包含 API 密钥。是否复制到系统剪贴板？",
     );
     expect(copySensitiveText).toHaveBeenCalledWith("ccswitch://import?api_key=secret");
   });
@@ -188,12 +190,12 @@ describe("RouteCredentialExportDialog", () => {
     renderDialog();
 
     expect(await screen.findByText("transfer.selection_invalid")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Copy migration JSON" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Download JSON" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "复制迁移 JSON" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "下载 JSON" })).toBeDisabled();
 
-    await userEvent.click(screen.getByRole("tab", { name: "Scheme links" }));
+    await userEvent.click(screen.getByRole("tab", { name: "方案链接" }));
     expect(
-      screen.getByRole("button", { name: "Copy scheme URL for Production API" }),
+      screen.getByRole("button", { name: "复制 Production API 的方案链接" }),
     ).toBeDisabled();
   });
 
@@ -202,10 +204,10 @@ describe("RouteCredentialExportDialog", () => {
     renderDialog();
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Copy migration JSON" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "复制迁移 JSON" })).toBeEnabled();
     });
-    await userEvent.click(screen.getByRole("button", { name: "Copy migration JSON" }));
-    await userEvent.click(screen.getByRole("button", { name: "Download JSON" }));
+    await userEvent.click(screen.getByRole("button", { name: "复制迁移 JSON" }));
+    await userEvent.click(screen.getByRole("button", { name: "下载 JSON" }));
 
     expect(copySensitiveText).toHaveBeenCalledWith("");
     expect(downloadRouteCredentialJson).toHaveBeenCalledWith(
@@ -219,8 +221,8 @@ describe("RouteCredentialExportDialog", () => {
     renderDialog();
 
     await screen.findByText(jsonText.trim());
-    await userEvent.click(screen.getByRole("button", { name: "Copy migration JSON" }));
-    await userEvent.click(screen.getByRole("button", { name: "Save JSON" }));
+    await userEvent.click(screen.getByRole("button", { name: "复制迁移 JSON" }));
+    await userEvent.click(screen.getByRole("button", { name: "保存 JSON" }));
 
     expect(copySensitiveText).toHaveBeenCalledWith(jsonText);
     expect(saveRouteCredentialExport).toHaveBeenCalledWith({
@@ -235,7 +237,7 @@ describe("RouteCredentialExportDialog", () => {
     renderDialog();
 
     await screen.findByText(jsonText.trim());
-    await userEvent.click(screen.getByRole("button", { name: "Download JSON" }));
+    await userEvent.click(screen.getByRole("button", { name: "下载 JSON" }));
 
     expect(downloadRouteCredentialJson).toHaveBeenCalledWith(
       jsonText,
@@ -250,7 +252,7 @@ describe("RouteCredentialExportDialog", () => {
     renderDialog();
 
     await screen.findByText(jsonText.trim());
-    await userEvent.click(screen.getByRole("button", { name: "Copy migration JSON" }));
+    await userEvent.click(screen.getByRole("button", { name: "复制迁移 JSON" }));
 
     expect(await screen.findByText("clipboard denied")).toBeInTheDocument();
     expect(screen.getByText(jsonText.trim())).toBeInTheDocument();
@@ -260,7 +262,7 @@ describe("RouteCredentialExportDialog", () => {
     const nextExport = new Promise<RouteCredentialExportResult>(() => {});
     const view = renderDialog();
     await screen.findByText(jsonText.trim());
-    await userEvent.click(screen.getByRole("tab", { name: "Scheme links" }));
+    await userEvent.click(screen.getByRole("tab", { name: "方案链接" }));
     expect(screen.getByText("ccswitch://import?api_key=secret")).toBeInTheDocument();
 
     view.rerender(
@@ -284,7 +286,7 @@ describe("RouteCredentialExportDialog", () => {
       />,
     );
 
-    expect(await screen.findByText("Generating export..." )).toBeInTheDocument();
+    expect(await screen.findByText("正在生成导出内容..." )).toBeInTheDocument();
     expect(screen.queryByText(jsonText.trim())).not.toBeInTheDocument();
     view.unmount();
   });
@@ -295,7 +297,7 @@ describe("RouteCredentialExportDialog", () => {
     launcher.focus();
     const view = renderDialog();
 
-    expect(screen.getByRole("button", { name: "Close export dialog" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "关闭导出对话框" })).toHaveFocus();
 
     view.rerender(
       <RouteCredentialExportDialog
@@ -314,19 +316,19 @@ describe("RouteCredentialExportDialog", () => {
     renderDialog();
     await screen.findByText(jsonText.trim());
 
-    const close = screen.getByRole("button", { name: "Close export dialog" });
-    const download = screen.getByRole("button", { name: "Download JSON" });
+    const close = screen.getByRole("button", { name: "关闭导出对话框" });
+    const download = screen.getByRole("button", { name: "下载 JSON" });
     close.focus();
     await user.keyboard("{Shift>}{Tab}{/Shift}");
     expect(download).toHaveFocus();
     await user.tab();
     expect(close).toHaveFocus();
 
-    const jsonTab = screen.getByRole("tab", { name: "Migration JSON" });
+    const jsonTab = screen.getByRole("tab", { name: "迁移 JSON" });
     jsonTab.focus();
     await user.keyboard("{ArrowRight}");
-    expect(screen.getByRole("tab", { name: "Scheme links" })).toHaveFocus();
-    expect(screen.getByRole("tab", { name: "Scheme links" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "方案链接" })).toHaveFocus();
+    expect(screen.getByRole("tab", { name: "方案链接" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
@@ -345,7 +347,7 @@ describe("RouteCredentialExportDialog", () => {
       />,
     );
 
-    expect(screen.getByText("3 selected · claude · in_pool")).toBeInTheDocument();
+    expect(screen.getByText("已选择 3 项 · claude · in_pool")).toBeInTheDocument();
     expect(exportRouteCredentials).toHaveBeenCalledTimes(1);
     expect(exportRouteCredentials).toHaveBeenCalledWith({
       selection_context: selectionContext,

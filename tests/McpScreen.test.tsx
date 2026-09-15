@@ -24,9 +24,9 @@ vi.mock("../src/lib/api/client", () => ({
   mcpUpsertLocalServer: vi.fn(),
 }));
 
-function renderScreen(language: "en" | "zh-CN") {
+function renderScreen() {
   return render(
-    <I18nProvider initialLanguage={language}>
+    <I18nProvider initialLanguage="zh-CN">
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <McpScreen />
       </QueryClientProvider>
@@ -44,7 +44,7 @@ describe("McpScreen", () => {
     vi.mocked(mcpScanLocal).mockResolvedValue([]);
     vi.mocked(mcpListMarketplaces).mockResolvedValue([]);
 
-    renderScreen("zh-CN");
+    renderScreen();
 
     expect(await screen.findByText("MCP 服务器")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "添加服务器" })).toBeInTheDocument();
@@ -57,19 +57,9 @@ describe("McpScreen", () => {
     );
     vi.mocked(mcpListMarketplaces).mockResolvedValue([]);
 
-    renderScreen("zh-CN");
+    renderScreen();
 
     expect(await screen.findByRole("alert")).toHaveTextContent("MCP 配置无效");
     expect(screen.getByRole("alert")).not.toHaveTextContent("raw backend text");
-  });
-
-  it("keeps the English labels available", async () => {
-    vi.mocked(mcpScanLocal).mockResolvedValue([]);
-    vi.mocked(mcpListMarketplaces).mockResolvedValue([]);
-
-    renderScreen("en");
-
-    expect(await screen.findByText("MCP servers")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add server" })).toBeInTheDocument();
   });
 });
