@@ -2992,15 +2992,24 @@ export function AccountsScreen({
   const modelTestRule = activeCapability?.operations.model_test;
   // A phone has no CLI config file to write, and the write stops at
   // `resolve_home_dir` — the one directory an Android app process does not have — so
-  // the feature is absent there rather than present-and-always-failing. `desktop`
+  // the write is absent there rather than present-and-always-failing. `desktop`
   // cannot stand in for this: it is also false in a browser, where writing does work.
+  //
+  // The switch on the strip is not the write, though, and does not go away with it:
+  // it opens the dialog that carries the pool's endpoint, its key and its HTTPS
+  // twin, which is the only place a client this app cannot write is set up by hand
+  // — and on a phone that is every client. Hiding the switch left "how do I point
+  // something at the pool" unanswerable from the pool's own toolbar, which is where
+  // the answer lives.
   const configWriteAvailable = !isMobileApp();
   const configWriteEnabled =
     capabilityReady && operationEnabled(configWriteRule) && configWriteAvailable;
   const officialImportEnabled = capabilityReady && operationEnabled(officialImportRule);
   const officialQuotaEnabled = capabilityReady && operationEnabled(officialQuotaRule);
   const modelTestEnabled = capabilityReady && operationEnabled(modelTestRule);
-  const configWriteReason = capabilityReason(configWriteRule);
+  const configWriteReason = configWriteAvailable
+    ? capabilityReason(configWriteRule)
+    : "本机没有可写入的 CLI 配置文件。";
   const officialImportReason = capabilityReason(officialImportRule);
   const officialQuotaReason = capabilityReason(officialQuotaRule);
   const modelTestReason = capabilityReason(modelTestRule);
@@ -6153,43 +6162,39 @@ export function AccountsScreen({
                   <Play aria-hidden="true" className="h-3.5 w-3.5 fill-current" />
                 </button>
               )}
-              {configWriteAvailable ? (
-                <>
-                  <button
-                    aria-label="写入路由配置文件"
-                    className={`relative grid h-6 w-6 place-items-center border bg-white motion-control hover:bg-stone-200 disabled:opacity-50 ${
-                      configWriteStale
-                        ? "border-amber-400 text-amber-700"
-                        : "border-stone-300 text-stone-700"
-                    }`}
-                    // Platforms without a native config write still open the dialog:
-                    // it is where the endpoint parameters for hand-configured clients
-                    // live, and the write itself stays gated inside it.
-                    disabled={!routeServiceReady || writeConfigsMutation.isPending}
-                    onClick={() => setConfigWriteDialogOpen(true)}
-                    title={
-                      !configWriteEnabled
-                        ? configWriteReason + "可在弹窗里复制端点参数手动配置。"
-                        : configWriteStale
-                          ? "配置已变更，需重新写入才会生效"
-                          : "对接客户端：把当前算力池写入客户端配置"
-                    }
-                    type="button"
-                  >
-                    <Plug aria-hidden="true" className="h-3.5 w-3.5" />
-                    {configWriteStale ? (
-                      <span
-                        aria-hidden="true"
-                        className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-amber-500"
-                      />
-                    ) : null}
-                  </button>
-                  {configWriteStale ? (
-                    <span className="shrink-0 text-[11px] font-semibold text-amber-700">
-                      配置已变更，需重新写入
-                    </span>
-                  ) : null}
-                </>
+              <button
+                aria-label="写入路由配置文件"
+                className={`relative grid h-6 w-6 place-items-center border bg-white motion-control hover:bg-stone-200 disabled:opacity-50 ${
+                  configWriteStale
+                    ? "border-amber-400 text-amber-700"
+                    : "border-stone-300 text-stone-700"
+                }`}
+                // Platforms without a native config write still open the dialog:
+                // it is where the endpoint parameters for hand-configured clients
+                // live, and the write itself stays gated inside it.
+                disabled={!routeServiceReady || writeConfigsMutation.isPending}
+                onClick={() => setConfigWriteDialogOpen(true)}
+                title={
+                  !configWriteEnabled
+                    ? configWriteReason + "可在弹窗里复制端点参数手动配置。"
+                    : configWriteStale
+                      ? "配置已变更，需重新写入才会生效"
+                      : "对接客户端：把当前算力池写入客户端配置"
+                }
+                type="button"
+              >
+                <Plug aria-hidden="true" className="h-3.5 w-3.5" />
+                {configWriteStale ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-amber-500"
+                  />
+                ) : null}
+              </button>
+              {configWriteStale ? (
+                <span className="shrink-0 text-[11px] font-semibold text-amber-700">
+                  配置已变更，需重新写入
+                </span>
               ) : null}
               {activePlatform === "claude" ? (
                 <button

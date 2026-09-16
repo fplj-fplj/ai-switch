@@ -254,7 +254,36 @@ impl WebService {
         Self::set_sensitive_command_policy(&state.web_service, false).await;
         let saved = Self::save_config(&state.paths, config).await?;
         Self::reconcile_sensitive_command_policy_locked(state, &saved).await;
+        Self::apply_saved_listen_address_locked(state, &saved).await;
         Ok(saved)
+    }
+
+    /// Moves a running listener to the address the saved config now asks for.
+    ///
+    /// A socket is bound when it is created and never follows the file, so this is
+    /// the only thing that makes a saved `host` take effect without a restart — and
+    /// turning on LAN access is a `host` change saved from a panel whose only button
+    /// while the service is running is this one. Without it the switch read as on,
+    /// the file said `0.0.0.0`, and the pool went on answering on loopback until the
+    /// next launch: the device itself could reach it and nothing else could.
+    ///
+    /// Best-effort on purpose. Saving an incomplete config has always succeeded and
+    /// still does, so a config that could not start leaves the running listener
+    /// where it is rather than failing the save. `start_server_locked` is what
+    /// decides whether a move is needed at all: it reuses a listener that already
+    /// answers where the config asks.
+    async fn apply_saved_listen_address_locked(state: &AppState, config: &WebServiceConfig) {
+        let running = {
+            let inner = state.web_service.inner.lock().await;
+            inner.status.clone().filter(|status| status.running)
+        };
+        if running.is_none() || validate_start_config(config).is_err() {
+            return;
+        }
+        if let Err(error) = Self::start_server_locked(Arc::new(state.clone()), config.clone()).await
+        {
+            eprintln!("Web service could not move to the saved address: {error}");
+        }
     }
 
     pub async fn status(
@@ -303,10 +332,33 @@ impl WebService {
     ) -> Result<WebServerStatus, AppError> {
         let config = Self::normalize_config(config);
         let tls_paths = validate_start_config(&config)?;
-        if let Some(status) = state.web_service.inner.lock().await.status.clone() {
-            if status.running {
+        // Read in its own scope: the guard has to be gone before
+        // `release_listener_locked` takes the same lock again.
+        let running = {
+            let inner = state.web_service.inner.lock().await;
+            inner.status.clone().filter(|status| status.running)
+        };
+        if let Some(status) = running {
+            // A socket is bound to an address when it is created and never follows
+            // the file afterwards, so a running listener is only reusable when it
+            // already answers where this config asks. It used to be reused
+            // unconditionally, and turning on LAN access writes `0.0.0.0` and then
+            // calls this to apply it — so `start` found a listener, returned its
+            // status, and left the pool on loopback until the next launch. The
+            // switch read as on while nothing outside the device could reach it.
+            // The same address still reuses the socket, which is the case that
+            // matters at launch.
+            let bound = RouteProxyService::status(&state.route_proxy).await;
+            let bound_elsewhere = bound.shared_listener
+                && (bound.bind_host != config.host || bound.port != Some(config.port));
+            if !bound_elsewhere {
                 return Ok(status);
             }
+            // Resolved before the old listener is closed, so a host that cannot be
+            // resolved leaves the working listener alone instead of taking the
+            // service down to report it.
+            resolve_bind_address(&config.host, config.port).await?;
+            Self::release_listener_locked(state.as_ref()).await;
         }
 
         let token = config.token.clone().unwrap_or_default();
@@ -430,15 +482,14 @@ impl WebService {
         Ok(status)
     }
 
-    pub async fn stop(state: &AppState) -> WebServerStatus {
-        let _guard = state.web_service.config_reconciliation_lock.lock().await;
-        Self::set_sensitive_command_policy(&state.web_service, false).await;
-        let config = Self::load_config(&state.paths).await.unwrap_or_default();
-        RouteProxyService::set_route_access_enabled(
-            &state.route_proxy,
-            config.route_access_enabled,
-        )
-        .await;
+    /// Shuts the listener down and forgets it, and says whether there was one to
+    /// shut down.
+    ///
+    /// Split out of `stop` so `start` can replace a listener that is bound
+    /// somewhere else: `start` already holds the reconciliation lock, and the rest
+    /// of `stop` — reloading the config, clearing the legacy auto-start marker,
+    /// dropping Tailscale — describes ending the service rather than moving it.
+    async fn release_listener_locked(state: &AppState) -> bool {
         let (shutdown, join_handle, owned_listener) = {
             let mut inner = state.web_service.inner.lock().await;
             let owned_listener = inner.status.take().is_some_and(|status| status.running);
@@ -463,6 +514,20 @@ impl WebService {
         }
         if owned_listener {
             RouteProxyService::clear_shared_listener(&state.route_proxy).await;
+        }
+        owned_listener
+    }
+
+    pub async fn stop(state: &AppState) -> WebServerStatus {
+        let _guard = state.web_service.config_reconciliation_lock.lock().await;
+        Self::set_sensitive_command_policy(&state.web_service, false).await;
+        let config = Self::load_config(&state.paths).await.unwrap_or_default();
+        RouteProxyService::set_route_access_enabled(
+            &state.route_proxy,
+            config.route_access_enabled,
+        )
+        .await;
+        if Self::release_listener_locked(state).await {
             if let Err(error) = RouteProxyHttpsService::clear_auto_start(&state.paths).await {
                 eprintln!("Could not clear legacy pool auto-start: {error}");
             }

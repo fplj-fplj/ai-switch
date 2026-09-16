@@ -109,7 +109,16 @@ export function WebServiceSettings() {
     mutationFn: async () => {
       const saved = await saveWebServiceConfig(normalizeConfig(form));
       queryClient.setQueryData(["web-service-config"], saved);
-      await queryClient.invalidateQueries({ queryKey: ["tailscale-status"] });
+      // Saving can move the running listener now: a changed host or port is applied
+      // by rebinding it there, which is what makes the LAN switch above take effect
+      // without a restart. Both readouts below describe the old binding until they
+      // are re-read — the panel's own, and the pool's toolbar, which reads its
+      // address from the route proxy.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["web-server-status"] }),
+        queryClient.invalidateQueries({ queryKey: ["route-proxy-status"] }),
+        queryClient.invalidateQueries({ queryKey: ["tailscale-status"] }),
+      ]);
       return saved;
     },
   });
@@ -162,7 +171,11 @@ export function WebServiceSettings() {
   });
 
   const status = statusQuery.data;
-  const httpTransportRequiresTls = !form.tlsEnabled && !isLoopbackHost(form.host);
+  // A non-loopback plaintext listener is refused unless TLS or the LAN switch says
+  // otherwise, so with LAN access on there is nothing to warn about — the note below
+  // is the one that says the pool is now on the network.
+  const httpTransportRequiresTls =
+    !form.tlsEnabled && !isLoopbackHost(form.host) && form.allowLanAccess !== true;
   const serviceHost = status?.host ?? form.host;
   const servicePort = status?.port ?? form.port;
 

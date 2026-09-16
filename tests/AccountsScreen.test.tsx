@@ -1386,10 +1386,14 @@ describe("AccountsScreen", () => {
     }
   });
 
-  it("leaves the config write out of the mobile toolbar", async () => {
+  it("keeps the pool toolbar's way into the endpoint parameters on mobile", async () => {
     // A phone has no CLI config file to write, and the write stops at
-    // `resolve_home_dir`, which an Android app process does not have. Absent beats
-    // present-and-always-failing.
+    // `resolve_home_dir`, which an Android app process does not have. The write is
+    // gone there — but the switch is not the write. It opens the dialog that carries
+    // the pool's endpoint, its key and its HTTPS twin, which is the only way to
+    // point a client at the pool by hand, and on a phone every client is by hand.
+    // Hiding it left "what address do I give it" unanswerable from the pool's own
+    // toolbar, which is where the answer lives.
     const originalUserAgent = window.navigator.userAgent;
     Object.defineProperty(window.navigator, "userAgent", {
       configurable: true,
@@ -1398,13 +1402,41 @@ describe("AccountsScreen", () => {
     });
 
     try {
+      vi.mocked(getRouteProxyStatus).mockResolvedValue({
+        running: true,
+        route_access_enabled: true,
+        bind_host: "127.0.0.1",
+        port: 43111,
+        base_url: "http://127.0.0.1:43111",
+        https_port: null,
+        https_base_url: null,
+        https_error: null,
+      });
+      poolStateByPlatform.set("codex", ["cred-official-1"]);
       renderScreen("codex", "in_pool");
 
       await screen.findByTestId("pool-status-strip");
-      expect(screen.queryByLabelText("写入路由配置文件")).not.toBeInTheDocument();
-      // One button leaves, not the row: its neighbours are still there.
+      const write = screen.getByLabelText("写入路由配置文件");
+      expect(write).toHaveAttribute(
+        "title",
+        expect.stringContaining("本机没有可写入的 CLI 配置文件。"),
+      );
+      // Its neighbours are untouched.
       expect(screen.getByLabelText("打开算力池测试菜单")).toBeInTheDocument();
       expect(screen.getByLabelText("启用算力池路由接入")).toBeInTheDocument();
+
+      await userEvent.click(write);
+      await screen.findByText("接入算力池");
+
+      // Nothing here can be written, so the dialog opens on the parameters.
+      expect(screen.getByRole("tab", { name: "其他 Agent" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+      expect(screen.getByRole("tab", { name: "内置支持" })).toHaveAttribute(
+        "aria-selected",
+        "false",
+      );
     } finally {
       Object.defineProperty(window.navigator, "userAgent", {
         configurable: true,
