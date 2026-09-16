@@ -431,8 +431,12 @@ button:disabled {
   /* Fixed elements are laid out against the viewport, not `#root`, so they do not
      inherit its safe-area padding and have to apply the insets themselves —
      otherwise the drawer runs under the status bar and its first rows are
-     unreachable. */
-  inset: env(safe-area-inset-top, 0px) auto env(safe-area-inset-bottom, 0px)
+     unreachable. The bottom of the app's usable area is the bottom bar's top edge
+     as well, which `AppLayout` measures into `--bottom-nav-height`: without it the
+     drawer's own scroll region ends under the bar, and the last inch of the agent
+     list can never be scrolled into view. */
+  inset: env(safe-area-inset-top, 0px) auto
+    calc(env(safe-area-inset-bottom, 0px) + var(--bottom-nav-height, 0px))
     env(safe-area-inset-left, 0px);
   z-index: 50;
   width: min(var(--app-sidebar-width), calc(100vw - 3rem));
@@ -458,8 +462,10 @@ button:disabled {
    workspace instead of stacking on top of it. */
 .vibe-session-drawer {
   position: fixed;
+  /* Same reason as `.app-sidebar-drawer`: the app's usable area ends where the bottom
+     bar begins. Zero on every layout that has no bar. */
   top: 0;
-  bottom: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--bottom-nav-height, 0px));
   left: 0;
   z-index: 45;
   width: min(var(--vibe-session-list-width), calc(100vw - 3rem));
