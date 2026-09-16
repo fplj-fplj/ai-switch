@@ -3446,9 +3446,17 @@ summary:focus-visible {
    The insets replace `inset-0` rather than overriding it. Two classes setting the
    same property on one element resolve by stylesheet order, not by the order they
    appear in the class attribute — which is how a `hidden` once lost to a `flex`. */
+/*
+ * Overlays are anchored to the viewport — see the note on `.motion-page`'s
+ * `will-change` for why — and on a narrow layout the bottom navigation is a row
+ * *inside* the shell rather than an overlay. So the region an overlay may occupy ends
+ * where that bar begins: `AppLayout` measures it into `--bottom-nav-height`, and this
+ * is 0 on the layouts that have no bar.
+ */
 .motion-overlay-inset {
   inset: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
-    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    calc(env(safe-area-inset-bottom, 0px) + var(--bottom-nav-height, 0px))
+    env(safe-area-inset-left, 0px);
 }
 
 .app-sidebar-drawer,

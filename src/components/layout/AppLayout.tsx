@@ -234,6 +234,7 @@ export function AppLayout({
 }: AppLayoutProps) {
   const { t } = useI18n();
   const appShellRef = useRef<HTMLDivElement | null>(null);
+  const bottomNavRef = useRef<HTMLElement | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(readSidebarWidth);
   const [narrowLayout, setNarrowLayout] = useState(
     () => typeof window !== "undefined" && window.innerWidth < SIDEBAR_DRAWER_BREAKPOINT,
@@ -286,6 +287,38 @@ export function AppLayout({
     window.addEventListener("resize", syncNarrowLayout);
     return () => window.removeEventListener("resize", syncNarrowLayout);
   }, []);
+
+  // Publishes the bar's height for the overlays to inset themselves by.
+  //
+  // They are anchored to the viewport, and the bar is a grid row inside the shell
+  // rather than an overlay — so without this a drawer runs underneath it and the last
+  // few centimetres of a long form cannot be reached, however far you scroll. The
+  // height is measured rather than assumed: the bar holds a safe-area-padded row and
+  // its buttons carry their own labels.
+  useEffect(() => {
+    const root = document.documentElement;
+    const element = bottomNavRef.current;
+    if (!narrowLayout || !element) {
+      root.style.removeProperty("--bottom-nav-height");
+      return;
+    }
+
+    const publish = () => {
+      root.style.setProperty("--bottom-nav-height", `${element.offsetHeight}px`);
+    };
+    publish();
+
+    // jsdom has no ResizeObserver, and the height only changes when the bar does.
+    if (typeof ResizeObserver === "undefined") {
+      return () => root.style.removeProperty("--bottom-nav-height");
+    }
+    const observer = new ResizeObserver(publish);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--bottom-nav-height");
+    };
+  }, [narrowLayout]);
 
   useEffect(() => {
     if (!sidebarDrawerVisible) {
@@ -604,6 +637,7 @@ export function AppLayout({
             aria-label={t("layout.primary")}
             className="col-start-1 row-start-2 flex items-stretch gap-1 border-t border-stone-200 bg-white/85 px-1.5 py-1.5 backdrop-blur-xl"
             data-testid="app-bottom-nav"
+            ref={bottomNavRef}
           >
             {activeAgentItem ? (
               <BottomNavButton
