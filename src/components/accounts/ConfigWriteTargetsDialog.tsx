@@ -390,7 +390,7 @@ export function ConfigWriteTargetsDialog({
         ref={dialogRef}
         aria-labelledby="config-write-targets-title"
         aria-modal="true"
-        className="flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-stone-200 bg-white shadow-2xl"
+        className="flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-stone-200 bg-white shadow-2xl sm:max-h-[calc(100vh-2rem)]"
         role="dialog"
         tabIndex={-1}
       >

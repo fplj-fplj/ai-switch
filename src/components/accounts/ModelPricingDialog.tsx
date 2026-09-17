@@ -72,7 +72,7 @@ export function ModelPricingDialog({ open, onClose }: Props) {
 
   if (!open) return null;
   return <div className="motion-overlay motion-overlay-inset fixed z-50 grid place-items-center bg-stone-950/35 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <div aria-label="模型价格配置" className="flex max-h-[min(760px,calc(100vh-2rem))] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl" role="dialog">
+    <div aria-label="模型价格配置" className="flex max-h-full w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl sm:max-h-[min(760px,calc(100vh-2rem))]" role="dialog">
       <div className="flex items-start justify-between gap-4 border-b border-stone-100 px-5 py-4">
         <div><p className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">费用设置</p><h3 className="mt-0.5 text-lg font-semibold text-stone-950">配置各模型 Token 成本</h3><p className="mt-1 text-[12px] text-stone-500">价格单位为 USD / 每百万 Token。模型列表来自本地路由代理，未启动代理时也可以手动添加。</p></div>
         <button aria-label="关闭模型价格配置" className="rounded-xl border border-stone-200 p-1.5 text-stone-500 hover:bg-stone-50" onClick={onClose} type="button"><X className="h-4 w-4" /></button>

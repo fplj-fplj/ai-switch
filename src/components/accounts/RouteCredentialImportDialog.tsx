@@ -458,7 +458,7 @@ export function RouteCredentialImportDialog({ open, onClose, onImported }: Route
         ref={dialogRef}
         aria-labelledby="route-credential-import-title"
         aria-modal="true"
-        className="flex max-h-[min(760px,calc(100vh-1.5rem))] w-full max-w-3xl flex-col overflow-hidden rounded-md border border-stone-400 bg-stone-50 shadow-2xl"
+        className="flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-md border border-stone-400 bg-stone-50 shadow-2xl sm:max-h-[min(760px,calc(100vh-1.5rem))]"
         role="dialog"
         tabIndex={-1}
       >
