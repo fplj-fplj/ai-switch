@@ -3589,6 +3589,14 @@ export function AccountsScreen({
   const routeProxyQuery = useQuery({
     queryKey: ["route-proxy-status"],
     queryFn: getRouteProxyStatus,
+    // Saving the web-service config can move the running listener, and the save
+    // invalidates this query. Without this the refetch window drops `data` back to
+    // undefined, `routeServiceReady` flips false, and every button on the pool
+    // strip -- the route-access toggle included -- greys out for a status that
+    // never stopped being true. Holding the previous status keeps the strip
+    // usable; the real value still lands when the refetch resolves, so a listener
+    // that genuinely stopped still greys it.
+    placeholderData: (previous) => previous,
     refetchInterval: (query) => {
       if (query.state.data?.running) {
         stoppedPollsRef.current = 0;
