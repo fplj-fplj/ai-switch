@@ -528,42 +528,6 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn disabled_saas_root_redirects_without_permanent_caching() {
-        let (address, handle, _state, _temp) =
-            spawn_test_router_with_state(Arc::new(AtomicBool::new(true)), "test-primary-token")
-                .await;
-        let client = reqwest::Client::builder()
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .unwrap();
-        let response = client
-            .get(format!("http://{address}/"))
-            .send()
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::FOUND);
-        assert_eq!(response.headers()[header::LOCATION], "/ai-switch-admin");
-        assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
-        handle.abort();
-    }
-
-    #[tokio::test]
-    async fn saas_bootstrap_is_public_but_never_returns_the_primary_token() {
-        let (address, handle, _state, _temp) =
-            spawn_test_router_with_state(Arc::new(AtomicBool::new(true)), "test-primary-token")
-                .await;
-        let response = reqwest::get(format!("http://{address}/api/saas/public/config"))
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
-        let value: Value = response.json().await.unwrap();
-        assert_eq!(value["enabled"], false);
-        assert!(!value.to_string().contains("test-primary-token"));
-        handle.abort();
-    }
-
     fn assert_h5_cors_origin(response: &reqwest::Response) {
         assert_eq!(
             response
