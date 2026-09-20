@@ -129,7 +129,19 @@ class ComputePoolService : Service() {
         continue
       }
       try {
-        return JSONObject(file.readText()).optInt("port", DEFAULT_PORT)
+        val port = JSONObject(file.readText()).optInt("port", DEFAULT_PORT)
+        // Range-checked here rather than handed straight to `InetSocketAddress`,
+        // which throws `IllegalArgumentException` — not `IOException` — for a
+        // port outside 0..65535. That exception escapes `poolIsListening`'s
+        // catch, so it lands in a `Handler` callback and kills the process, and
+        // the watchdog probes every fifteen seconds so it would keep killing it.
+        // Port 0 is refused as well: it binds an arbitrary free port, which
+        // reads as "the pool is not up" and stops the service after eight
+        // probes. An out-of-range value falls through to the next candidate,
+        // the same way an unreadable file does.
+        if (port in 1..MAX_PORT) {
+          return port
+        }
       } catch (_: Exception) {
         // Unreadable or not JSON yet — mid-write, or written by an older build.
         // Fall through to the next candidate and then to the default.
@@ -212,6 +224,9 @@ class ComputePoolService : Service() {
 
     /** What the pool binds when nothing has configured it yet. */
     private const val DEFAULT_PORT = 19527
+
+    /** The largest port `InetSocketAddress` will accept. */
+    private const val MAX_PORT = 65535
 
     fun start(context: Context) {
       val intent = Intent(context, ComputePoolService::class.java)
