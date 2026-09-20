@@ -243,10 +243,9 @@ describe("SettingsScreen", () => {
     expect(screen.getByRole("button", { name: /会话/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /更新/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /日志/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Web 服务/ })).toBeInTheDocument();
-    const saasCard = screen.getByRole("button", { name: /SaaS 插件/ });
-    expect(saasCard.querySelector(".lucide-cloud-cog")).toBeInTheDocument();
-    expect(saasCard).toHaveClass(
+    const serviceCard = screen.getByRole("button", { name: /Web 服务/ });
+    expect(serviceCard).toBeInTheDocument();
+    expect(serviceCard).toHaveClass(
       "rounded-xl",
       "border",
       "border-stone-200",

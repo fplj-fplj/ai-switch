@@ -40,9 +40,7 @@ import { VibeScreen } from "./screens/VibeScreen";
 import { McpScreen } from "./screens/McpScreen";
 import { SkillsScreen } from "./screens/SkillsScreen";
 import { MotionPage, MotionProvider, type MotionDirection } from "./components/motion/MotionPrimitives";
-import { SaasAdmin } from "./saas";
 import { ImageGenerationScreen } from "./imagegen/ImageGenerationScreen";
-import { adminCall } from "./saas/api";
 
 const queryClient = createQueryClient();
 
@@ -66,7 +64,6 @@ const implementedScreens = new Set([
   "CryptoTools",
   "OCR",
   "Settings",
-  "SaaS",
   "ImageGen",
   "Sessions",
   "Updates",
@@ -89,14 +86,6 @@ export type PoolScopeFocus = {
 
 export function App() {
   const [webReady, setWebReady] = useState(canSkipWebAuthGate);
-  const [saasEnabled,setSaasEnabled] = useState(false);
-  const refreshSaas = useCallback(async()=>{
-    try {
-      const config = await adminCall<{enabled:boolean}>("config.get");
-      setSaasEnabled(config.enabled);
-    } catch { setSaasEnabled(false); }
-  },[]);
-  useEffect(()=>{if (webReady) void refreshSaas();},[refreshSaas, webReady]);
   const [screen, setScreen] = useState("Codex");
   const screenRef = useRef("Codex");
   const [navigationDirection, setNavigationDirection] = useState<MotionDirection>("neutral");
@@ -141,8 +130,7 @@ export function App() {
   const handleWebAuthenticated = useCallback(() => {
     queryClient.clear();
     setWebReady(true);
-    void refreshSaas();
-  }, [refreshSaas]);
+  }, []);
 
   const navigate = (nextScreen: string) => {
     const screens = Array.from(implementedScreens);
@@ -238,7 +226,6 @@ export function App() {
               // exactly that and was wired to Vibe alone.
               <ErrorBoundary label="App">
                 <AppLayout
-                  saasEnabled={saasEnabled}
                   activeScreen={screen}
                   agentVisibility={agentVisibility}
                   onAgentVisibilityChange={setAgentVisibility}
@@ -277,11 +264,9 @@ export function App() {
                       onAgentVisibilityChange={(platform, visible) =>
                         setAgentVisibility((current) => ({ ...current, [platform]: visible }))
                       }
-                      onSaasConfigChanged={() => void refreshSaas()}
                       onOpenFeature={navigate}
                     />
                   )}
-                  {screen === "SaaS" && <SaasAdmin onConfigChanged={()=>void refreshSaas()} />}
                   {screen === "ImageGen" && isScreenAvailable("ImageGen") && <ImageGenerationScreen />}
                   {screen === "MCP" && isScreenAvailable("MCP") && <McpScreen />}
                   {screen === "Skills" && isScreenAvailable("Skills") && <SkillsScreen />}

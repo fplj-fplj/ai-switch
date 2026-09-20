@@ -373,7 +373,6 @@ pub fn run() {
             deeplink_protocols: DeepLinkProtocolRuntime::default(),
             close_to_tray,
             route_proxy: RouteProxyRuntimeState::default(),
-            saas: crate::saas::SaasRuntime::default(),
             web_service: WebServiceRuntimeState::default(),
             tailscale: TailscaleRuntimeState::default(),
             terminals: TerminalManager::default(),
@@ -501,7 +500,6 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            crate::saas::transport::saas_admin,
             imagegen_list_sessions,
             imagegen_create_session,
             imagegen_update_session,
@@ -639,11 +637,6 @@ pub fn run() {
             // watchdog is what covers that path.
             if let RunEvent::Exit = event {
                 let state = app_handle.state::<AppState>();
-                tauri::async_runtime::block_on(async {
-                    if state.saas.logs.shutdown().await.is_err() {
-                        eprintln!("SaaS log queue could not drain before exit");
-                    }
-                });
                 tauri::async_runtime::block_on(TailscaleService::shutdown(&state.tailscale));
                 state.terminals.kill_all();
             }

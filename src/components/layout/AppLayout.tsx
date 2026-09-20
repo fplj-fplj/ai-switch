@@ -79,7 +79,6 @@ type AppLayoutProps = {
   sidebarCollapsed: boolean;
   agentVisibility?: AgentVisibility;
   onAgentVisibilityChange?: (visibility: AgentVisibility) => void;
-  saasEnabled?: boolean;
 };
 
 type AgentNavItem = {
@@ -235,7 +234,6 @@ export function AppLayout({
   sidebarCollapsed,
   agentVisibility,
   onAgentVisibilityChange,
-  saasEnabled = false,
 }: AppLayoutProps) {
   const { t } = useI18n();
   const appShellRef = useRef<HTMLDivElement | null>(null);
@@ -597,15 +595,6 @@ export function AppLayout({
                 >
                   {t("layout.system")}
                 </p>
-                {saasEnabled && (
-                  <NavButton
-                    active={activeScreen === "SaaS"}
-                    collapsed={sidebarContentCollapsed}
-                    icon={PlugZap}
-                    label="SaaS"
-                    onClick={() => handleNavigate("SaaS")}
-                  />
-                )}
                 {isScreenAvailable("ImageGen") && (
                   <NavButton
                     active={activeScreen === "ImageGen"}

@@ -72,8 +72,7 @@ use std::collections::HashMap;
 pub fn is_sensitive_command(command: &str) -> bool {
     matches!(
         command,
-        "saas_admin"
-            | "create_route_pool_group"
+create_route_pool_group
             | "update_route_pool_group"
             | "delete_route_pool_group"
             | "set_route_pool_group_members"
@@ -217,16 +216,6 @@ pub async fn dispatch_command(
                     .await
                     .map_err(to_error)?,
             )
-        }
-        "saas_admin" => {
-            let operation = required_string_arg(&args, "operation")?;
-            crate::saas::admin_command(
-                &state,
-                &operation,
-                args.get("payload").cloned().unwrap_or_else(|| json!({})),
-            )
-            .await
-            .map_err(ApiError::from)
         }
         "mcp_scan_local" => to_value(crate::mcp::service::scan_local().map_err(ApiError::from)?),
         "mcp_list_marketplaces" => to_value(crate::mcp::marketplace::list_marketplaces().await),
@@ -1483,7 +1472,6 @@ mod tests {
                     crate::services::deeplink_protocol_service::DeepLinkProtocolRuntime::default(),
                 close_to_tray: crate::app_state::CloseToTrayRuntime::default(),
                 route_proxy: RouteProxyRuntimeState::default(),
-                saas: crate::saas::SaasRuntime::default(),
                 web_service: WebServiceRuntimeState::default(),
                 tailscale: TailscaleRuntimeState::default(),
                 terminals: TerminalManager::default(),

@@ -19,7 +19,6 @@ mod paths;
 // Registered from `mobile.rs`; a desktop build has nothing to register.
 #[cfg(feature = "mobile")]
 mod pool_runtime;
-mod saas;
 mod security;
 pub mod server;
 mod services;

@@ -74,9 +74,6 @@ describe("command contract", () => {
       readSource("src/lib/api/client.ts"),
       /\binvoke(?:<[^>]+>)?\(\s*"([a-z0-9_]+)"/g,
     );
-    for (const command of extractMatches(readSource("src/saas/api.ts"), /\.call(?:<[^>]+>)?\(\s*"([a-z0-9_]+)"/g)) {
-      clientCommands.add(command);
-    }
     for (const command of extractMatches(readSource("src/imagegen/api.ts"), /\bcall(?:<[^>]+>)?\(\s*"([a-z0-9_]+)"/g)) {
       clientCommands.add(command);
     }

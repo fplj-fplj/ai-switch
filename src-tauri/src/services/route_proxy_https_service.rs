@@ -1473,7 +1473,6 @@ mod tests {
                     crate::services::deeplink_protocol_service::DeepLinkProtocolRuntime::default(),
                 close_to_tray: crate::app_state::CloseToTrayRuntime::default(),
                 route_proxy: RouteProxyRuntimeState::default(),
-                saas: crate::saas::SaasRuntime::default(),
                 web_service: WebServiceRuntimeState::default(),
                 tailscale: TailscaleRuntimeState::default(),
                 terminals: TerminalManager::default(),

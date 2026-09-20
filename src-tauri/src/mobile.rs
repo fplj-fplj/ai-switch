@@ -99,7 +99,6 @@ async fn bootstrap(app: tauri::AppHandle) -> Result<AppState, String> {
         // the default keeps the field meaningful rather than pretending otherwise.
         close_to_tray: crate::app_state::CloseToTrayRuntime::default(),
         route_proxy: RouteProxyRuntimeState::default(),
-        saas: crate::saas::SaasRuntime::default(),
         web_service: WebServiceRuntimeState::default(),
         tailscale: TailscaleRuntimeState::default(),
         event_broadcaster: Arc::new(WebEventBroadcaster::new()),
@@ -242,15 +241,10 @@ pub fn run() {
         .expect("failed to build AI Switch")
         .run(|app_handle, event| {
             // Android tears the process down without dropping Tauri-managed state,
-            // so this is the only place the tailscale sidecar and the SaaS log
-            // queue get a chance to stop cleanly.
+            // so this is the only place the tailscale sidecar gets a chance to
+            // stop cleanly.
             if let RunEvent::Exit = event {
                 let state = app_handle.state::<AppState>();
-                tauri::async_runtime::block_on(async {
-                    if state.saas.logs.shutdown().await.is_err() {
-                        eprintln!("SaaS log queue could not drain before exit");
-                    }
-                });
                 tauri::async_runtime::block_on(TailscaleService::shutdown(&state.tailscale));
             }
         });
