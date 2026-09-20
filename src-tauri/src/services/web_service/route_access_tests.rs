@@ -11,7 +11,6 @@ async fn fixture() -> (tempfile::TempDir, Arc<AppState>, WebServiceConfig) {
     let state = Arc::new(AppState {
         paths: AppPaths::from_data_dir(directory.path().to_path_buf()),
         pool,
-        saas: Default::default(),
         config_writes: Default::default(),
         deeplink_protocols: Default::default(),
         close_to_tray: Default::default(),

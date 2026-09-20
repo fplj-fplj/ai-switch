@@ -148,7 +148,6 @@ fn build_panel_routes(context: WebServerContext) -> Router<WebServerContext> {
     router
         .nest("/api", api_router)
         .layer(h5_cors_layer())
-        .merge(crate::saas::transport::routes())
 }
 
 async fn shared_fallback(
@@ -159,47 +158,14 @@ async fn shared_fallback(
     body: Body,
 ) -> Response {
     if is_shared_model_api_path(uri.path()) {
-        let key = crate::services::route_proxy_service::extract_inbound_api_key(&headers, None);
-        if let Err(error) = context.state.saas.initialize(&context.state.pool).await {
-            return crate::saas::transport::error_response(error);
-        }
-        let saas_config = match crate::saas::config::load(&context.state.pool).await {
-            Ok(config) => config,
-            Err(error) => return crate::saas::transport::error_response(error),
-        };
-        if key
-            .as_deref()
-            .is_some_and(|key| key.starts_with("sk-saas-"))
-        {
-            return crate::saas::proxy::handle(&context.state, method, headers, uri, body).await;
-        }
-        if saas_config.enabled && !crate::web::auth::is_authorized(&headers, &context.token) {
-            let valid = match crate::database::repositories::route_proxy_key_repository::RouteProxyKeyRepository::list_all(&context.state.pool).await {
-                Ok(keys) => key.as_ref().is_some_and(|key| keys.iter().any(|(stored,_)|stored==key)),
-                Err(_) => false,
-            };
-            if !valid {
-                return crate::saas::transport::error_response(crate::saas::repository::invalid(
-                    "saas.invalid_key",
-                    "A valid API key is required",
-                ));
-            }
-        }
         if !crate::services::route_proxy_service::RouteProxyService::is_route_access_enabled(
             &context.state.route_proxy,
         )
         .await
-            && !key
-                .as_deref()
-                .is_some_and(|key| key.starts_with("sk-saas-"))
         {
             return route_access_disabled_response();
         }
-        let Some(proxy_state) = context.proxy.clone().or_else(|| {
-            saas_config
-                .enabled
-                .then(|| build_proxy_state(context.state.pool.clone(), &context.state.route_proxy))
-        }) else {
+        let Some(proxy_state) = context.proxy.clone() else {
             return static_fallback(State(context), uri).await;
         };
         // This listener can be exposed beyond loopback. The platform header is
@@ -448,7 +414,6 @@ mod tests {
             deeplink_protocols: DeepLinkProtocolRuntime::default(),
             close_to_tray: crate::app_state::CloseToTrayRuntime::default(),
             route_proxy: RouteProxyRuntimeState::default(),
-            saas: crate::saas::SaasRuntime::default(),
             web_service: WebServiceRuntimeState::default(),
             tailscale: TailscaleRuntimeState::default(),
             terminals: TerminalManager::default(),
@@ -488,7 +453,6 @@ mod tests {
             deeplink_protocols: DeepLinkProtocolRuntime::default(),
             close_to_tray: crate::app_state::CloseToTrayRuntime::default(),
             route_proxy: RouteProxyRuntimeState::default(),
-            saas: crate::saas::SaasRuntime::default(),
             web_service: WebServiceRuntimeState::default(),
             tailscale: TailscaleRuntimeState::default(),
             terminals: TerminalManager::default(),
@@ -527,7 +491,6 @@ mod tests {
             deeplink_protocols: DeepLinkProtocolRuntime::default(),
             close_to_tray: crate::app_state::CloseToTrayRuntime::default(),
             route_proxy: RouteProxyRuntimeState::default(),
-            saas: crate::saas::SaasRuntime::default(),
             web_service: WebServiceRuntimeState::default(),
             tailscale: TailscaleRuntimeState::default(),
             terminals: TerminalManager::default(),
@@ -599,35 +562,6 @@ mod tests {
         assert_eq!(value["enabled"], false);
         assert!(!value.to_string().contains("test-primary-token"));
         handle.abort();
-    }
-
-    #[tokio::test]
-    async fn saas_model_gateway_requires_keys_and_never_trusts_platform_headers() {
-        let (address, server, state, _temp) =
-            spawn_test_router_with_state(Arc::new(AtomicBool::new(true)), "primary-secret").await;
-        state.saas.initialize(&state.pool).await.unwrap();
-        crate::saas::repository::test_enable(&state.pool).await;
-        let client = reqwest::Client::new();
-        let response = client
-            .get(format!("http://{address}/v1/models"))
-            .header("x-ai-switch-platform", "codex")
-            .send()
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-        let response = client
-            .get(format!("http://{address}/v1/models"))
-            .bearer_auth("sk-saas-invalid")
-            .header("x-ai-switch-platform", "codex")
-            .send()
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-        assert_eq!(
-            response.json::<Value>().await.unwrap()["code"],
-            "saas.invalid_key"
-        );
-        server.abort();
     }
 
     fn assert_h5_cors_origin(response: &reqwest::Response) {
