@@ -335,7 +335,12 @@ pub fn os_name() -> &'static str {
 /// value as an argument lets a test feed it `"aarch64"` and assert what comes
 /// back, instead of comparing `"x86_64"` against `"aarch64"` and passing without
 /// ever executing the mapping.
-fn arch_name_for(raw_arch: &str) -> &'static str {
+///
+/// The argument is `&'static str`, not `&str`: the fallback arm returns the value
+/// it was given, so a borrowed argument cannot satisfy the `&'static str` return
+/// type. Every caller already passes something `'static` — `std::env::consts::ARCH`
+/// at the call site, and string literals in the test.
+fn arch_name_for(raw_arch: &'static str) -> &'static str {
     match raw_arch {
         "aarch64" => "arm64",
         "x86_64" => "x86_64",
