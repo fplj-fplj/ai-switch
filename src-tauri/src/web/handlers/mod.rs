@@ -72,7 +72,7 @@ use std::collections::HashMap;
 pub fn is_sensitive_command(command: &str) -> bool {
     matches!(
         command,
-create_route_pool_group
+        "create_route_pool_group"
             | "update_route_pool_group"
             | "delete_route_pool_group"
             | "set_route_pool_group_members"
