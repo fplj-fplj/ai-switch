@@ -43,7 +43,19 @@
     </queries>
 
 
+    <!-- The app's private data carries the credential store, and those
+         credentials are still written in the clear (`secret_payload_json` in
+         the route-credential table). Letting the platform back that up would
+         copy every upstream API key off the device — into cloud backup, and
+         onto whatever phone the user migrates to. Opt out.
+
+         `allowBackup` covers the cloud path. Android 12+ routes
+         device-to-device transfer through `dataExtractionRules` instead, which
+         is deliberately not declared here: its `exclude` schema cannot be
+         validated without the Android SDK, and a wrong guess fails the build.
+         It is tracked as a follow-up rather than guessed at. -->
     <application
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/Theme.ai_switch"
