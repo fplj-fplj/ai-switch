@@ -326,6 +326,24 @@ pub fn os_name() -> &'static str {
     os_name_for(reported_os())
 }
 
+/// Maps a raw `std::env::consts::ARCH` value to the name the Claude/Codex CLIs
+/// report.
+///
+/// Split out from [`arch_name`] for the same reason [`os_name_for`] was split out
+/// of [`os_name`]: the value that matters is the one an Android phone supplies,
+/// and no test running on an x86_64 host can reach that branch. Taking the raw
+/// value as an argument lets a test feed it `"aarch64"` and assert what comes
+/// back, instead of comparing `"x86_64"` against `"aarch64"` and passing without
+/// ever executing the mapping.
+fn arch_name_for(raw_arch: &str) -> &'static str {
+    match raw_arch {
+        "aarch64" => "arm64",
+        "x86_64" => "x86_64",
+        "x86" => "x86",
+        other => other,
+    }
+}
+
 /// CPU architecture mapped to the value the Claude/Codex CLIs report.
 ///
 /// No platform override is needed: Android reports `aarch64`, which maps to
@@ -333,12 +351,7 @@ pub fn os_name() -> &'static str {
 /// disguise. The raw Rust name would be a tell, and the test below pins that it
 /// never escapes.
 pub fn arch_name() -> &'static str {
-    match std::env::consts::ARCH {
-        "aarch64" => "arm64",
-        "x86_64" => "x86_64",
-        "x86" => "x86",
-        other => other,
-    }
+    arch_name_for(std::env::consts::ARCH)
 }
 
 /// Merge the Claude Code beta marker into an existing `anthropic-beta` value.
@@ -618,8 +631,18 @@ mod tests {
 
     #[test]
     fn architecture_never_reports_the_rust_triple_name() {
-        // `std::env::consts::ARCH` says `aarch64` on an ARM device; the SDKs say
-        // `arm64`. The raw Rust name is the tell.
+        // Asserting on `arch_name()` alone is vacuous on an x86_64 host: it
+        // compares "x86_64" against "aarch64" and never executes the arm that
+        // matters. Feed the mapping the value an ARM device actually supplies.
+        assert_eq!(arch_name_for("aarch64"), "arm64");
+        for raw in ["aarch64", "x86_64", "x86", "arm"] {
+            assert_ne!(
+                arch_name_for(raw),
+                "aarch64",
+                "raw arch {raw:?} leaked through the mapping"
+            );
+        }
+        // And keep the property asserted on whatever host this runs on.
         assert_ne!(arch_name(), "aarch64");
     }
 }
