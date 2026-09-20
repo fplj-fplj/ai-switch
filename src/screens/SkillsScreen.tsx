@@ -16,7 +16,7 @@ import { ApiClientError } from "../lib/api/errors";
 import { apiErrorMessageKey } from "../lib/api/errorMessages";
 import { useI18n } from "../lib/i18n";
 import type { SkillAgentType, SkillItem, SkillLayout, SkillScope } from "../lib/api/types";
-import { isDesktop } from "../lib/transport";
+import { isDesktopApp } from "../lib/platform";
 import {
   DEFAULT_SKILL_CONTENT,
   skillDisplayCopy,
@@ -208,7 +208,7 @@ export function SkillsScreen() {
       <SkillsToolbar
         agentType={agentType}
         agents={agentOptions}
-        desktop={isDesktop()}
+        desktop={isDesktopApp()}
         filterText={filterText}
         onAgentChange={(nextAgent) => { setAgentType(nextAgent); setSelectedId(null); setSelectedPackageId(null); setCreating(false); }}
         onFilterChange={setFilterText}

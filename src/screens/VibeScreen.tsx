@@ -34,7 +34,7 @@ import {
   listSessions,
 } from "../lib/api/client";
 import { useI18n } from "../lib/i18n";
-import { isDesktop } from "../lib/transport";
+import { isDesktopApp } from "../lib/platform";
 import { useDragResize } from "../lib/useDragResize";
 import {
   BUILT_IN_VIBE_SKINS,
@@ -1090,10 +1090,12 @@ export function VibeScreen({ onExitVibe }: VibeScreenProps) {
     () => initialAppearance.skinId ?? readStoredVibeSkin()?.id ?? BUILT_IN_VIBE_SKINS[0].id,
   );
   const [error, setError] = useState<string | null>(null);
-  // The native directory picker comes from the Tauri dialog plugin, so in a
-  // browser the entry points that use it have to be disabled rather than
-  // rejecting into nothing.
-  const desktop = isDesktop();
+  // The native directory picker comes from the Tauri dialog plugin, so the
+  // entry points that use it have to be disabled rather than rejecting into
+  // nothing — in a browser, and on Android, where `tauri-plugin-dialog` is not
+  // linked either (`capabilities/android.json` grants only `core:default`).
+  // `isDesktop()` would read true on Android and hand back a dead picker.
+  const desktop = isDesktopApp();
   const [sessionListScrolling, setSessionListScrolling] = useState(false);
   const [expandedDirectories, setExpandedDirectories] = useState<Set<string>>(() => new Set());
   const [sessionListCollapsed, setSessionListCollapsed] = useState(

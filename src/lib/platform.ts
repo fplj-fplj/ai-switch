@@ -45,6 +45,18 @@ export function isDesktopApp(): boolean {
   return isDesktop() && !isMobileApp();
 }
 
+/**
+ * Whether the OS back button exists and is delivered to this bundle.
+ *
+ * Only Android dispatches `backbutton` (Tauri 2), and only the packaged app has a
+ * listener worth registering — the desktop build, the browser and the standalone
+ * server all have no such button. Built on `isMobileApp()` rather than a fresh
+ * check so there stays one place that decides what "the Android bundle" means.
+ */
+export function isAndroidApp(): boolean {
+  return isMobileApp();
+}
+
 /** The platform Tauri inlined at build time, lowercased; `""` when absent. */
 export function buildPlatform(): string {
   const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;

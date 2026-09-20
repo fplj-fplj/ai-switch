@@ -22,6 +22,7 @@ import {
   downloadRouteCredentialJson,
 } from "../../lib/routeCredentialTransfer";
 import { isDesktopApp } from "../../lib/platform";
+import { pushBackHandler } from "../../lib/backHandler";
 import { Button } from "../ui/Button";
 
 export type RouteCredentialExportDialogProps = {
@@ -53,6 +54,14 @@ export function RouteCredentialExportDialog({
   onClose,
 }: RouteCredentialExportDialogProps) {
   const { t } = useI18n();
+
+  // The Android back button closes this dialog before anything behind it. Gated
+  // on `open` because the component stays mounted and renders `null` when
+  // closed — an ungated registration would swallow the press with a no-op close.
+  useEffect(() => {
+    if (!open) return;
+    return pushBackHandler(onClose);
+  }, [open, onClose]);
   const [selectionSnapshot, setSelectionSnapshot] = useState<SelectionSnapshot | null>(null);
   const [includeEnhancedMetadata, setIncludeEnhancedMetadata] = useState(true);
   const [activeTab, setActiveTab] = useState<ExportTab>("json");

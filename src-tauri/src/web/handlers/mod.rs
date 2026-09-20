@@ -567,17 +567,17 @@ pub async fn dispatch_command(
             )
         }
         "reload_model_price_overrides" => to_value(
-            reload_model_price_overrides_core()
+            reload_model_price_overrides_core(&state.paths)
                 .await
                 .map_err(to_error)?,
         ),
         "get_model_price_configs" => {
-            to_value(get_model_price_configs_core().await.map_err(to_error)?)
+            to_value(get_model_price_configs_core(&state.paths).await.map_err(to_error)?)
         }
         "save_model_price_configs" => {
             let configs: HashMap<String, ModelPriceConfig> = parse_arg(&args, "configs")?;
             to_value(
-                save_model_price_configs_core(configs)
+                save_model_price_configs_core(&state.paths, configs)
                     .await
                     .map_err(to_error)?,
             )

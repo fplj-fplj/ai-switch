@@ -5,6 +5,7 @@
 //! land on one and be forgotten on the other.
 
 use crate::error::AppError;
+use crate::paths::AppPaths;
 use crate::services::model_pricing;
 use crate::services::session_usage_service::{self, SessionUsageStats, TimeWindow};
 
@@ -30,14 +31,16 @@ pub async fn get_session_usage_stats_core(
         })
 }
 
-/// Reload model price overrides from `~/.ai-switch/model-prices.json`.
+/// Reload model price overrides from the injected data directory's
+/// `model-prices.json`.
 ///
 /// Returns the number of entries loaded. A missing file is not an error: it
 /// clears any previously loaded overrides and falls back to the built-in table.
-pub async fn reload_model_price_overrides_core() -> Result<usize, AppError> {
-    let path = crate::paths::AppPaths::resolve()?
-        .data_dir
-        .join("model-prices.json");
+///
+/// `paths` is threaded in rather than resolved here: `AppPaths::resolve()` walks
+/// `$HOME`, which the Android sandbox does not provide.
+pub async fn reload_model_price_overrides_core(paths: &AppPaths) -> Result<usize, AppError> {
+    let path = paths.data_dir.join("model-prices.json");
 
     let contents = match tokio::fs::read_to_string(&path).await {
         Ok(contents) => contents,
@@ -55,10 +58,9 @@ pub async fn reload_model_price_overrides_core() -> Result<usize, AppError> {
 
 /// Read the configured model prices without changing the active estimator.
 pub async fn get_model_price_configs_core(
+    paths: &AppPaths,
 ) -> Result<std::collections::HashMap<String, model_pricing::ModelPriceConfig>, AppError> {
-    let path = crate::paths::AppPaths::resolve()?
-        .data_dir
-        .join("model-prices.json");
+    let path = paths.data_dir.join("model-prices.json");
     let contents = match tokio::fs::read_to_string(&path).await {
         Ok(contents) => contents,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => "{}".to_string(),
@@ -74,11 +76,10 @@ pub async fn get_model_price_configs_core(
 
 /// Save and immediately activate the model price table.
 pub async fn save_model_price_configs_core(
+    paths: &AppPaths,
     configs: std::collections::HashMap<String, model_pricing::ModelPriceConfig>,
 ) -> Result<usize, AppError> {
-    let path = crate::paths::AppPaths::resolve()?
-        .data_dir
-        .join("model-prices.json");
+    let path = paths.data_dir.join("model-prices.json");
     let contents =
         serde_json::to_string_pretty(&configs).map_err(|error| AppError::Validation {
             code: "validation.model_prices_invalid",

@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/mobile-schema.json",
   "identifier": "android",
-  "description": "Permissions for the Android app. The panel is the same React bundle as the desktop window and reaches the Rust side over IPC, but the only plugin compiled into this build is Tauri's own core, so core:default is the whole list.",
+  "description": "Permissions for the Android app. The panel is the same React bundle as the desktop window and reaches the Rust side over IPC, but the only plugin compiled into this build is Tauri's own core, so core:default is almost the whole list. The one addition is core:window:allow-close, which the back button needs at the Settings root: registering onBackButtonPress cancels Android's default finish, so the root has to ask for it explicitly.",
   "platforms": ["android"],
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "core:window:allow-close"]
 }

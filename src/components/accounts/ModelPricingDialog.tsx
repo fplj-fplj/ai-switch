@@ -5,6 +5,7 @@ import { getModelPriceConfigs, getRouteProxyKey, getRouteProxyStatus, saveModelP
 import { fetchRouteProxyModels } from "../../lib/routeProxyModels";
 import { agentPlatforms } from "../layout/AppLayout";
 import { mergeModelPriceRows, parsePriceValue, type ModelPriceConfig, type ModelPriceRow } from "../../lib/modelPricing";
+import { pushBackHandler } from "../../lib/backHandler";
 
 type Props = { open: boolean; onClose: () => void };
 
@@ -12,6 +13,14 @@ function numberValue(value: number | null) { return value === null ? "" : String
 
 export function ModelPricingDialog({ open, onClose }: Props) {
   const queryClient = useQueryClient();
+
+  // The Android back button closes this dialog before anything behind it. Gated
+  // on `open` because the component stays mounted and renders `null` when
+  // closed — an ungated registration would swallow the press with a no-op close.
+  useEffect(() => {
+    if (!open) return;
+    return pushBackHandler(onClose);
+  }, [open, onClose]);
   const [rows, setRows] = useState<ModelPriceRow[]>([]);
   const [manualModel, setManualModel] = useState("");
   const [message, setMessage] = useState<string | null>(null);

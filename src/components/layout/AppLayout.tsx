@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { onBackButtonPress } from "@tauri-apps/api/app";
+import type { PluginListener } from "@tauri-apps/api/core";
 import { motion } from "motion/react";
 import {
   ChevronDown,
@@ -21,6 +23,9 @@ import {
   type AgentVisibility,
 } from "../../lib/agentVisibility";
 import { useI18n } from "../../lib/i18n";
+import { isAndroidApp } from "../../lib/platform";
+import { runTopBackHandler } from "../../lib/backHandler";
+import { requestAppExit, resolveBackAction } from "../../lib/backNavigation";
 import { isScreenAvailable } from "../../lib/screenAvailability";
 import { useDragResize } from "../../lib/useDragResize";
 
@@ -266,6 +271,53 @@ export function AppLayout({
     },
     onChange: setSidebarWidth,
   });
+
+  // Android's back button finishes the activity by default, so without this the
+  // phone quits the app from inside a dialog, from behind the open drawer, and
+  // from every screen that is not Settings — three things the button is expected
+  // to close instead. Registered only on Android: no other build has the button.
+  //
+  // `onBackButtonPress` cancels the default finish just by being registered, so
+  // the handler has no return value to send; it only decides what to do.
+  // Innermost first: an open dialog, then the drawer, then the screen fallback.
+  useEffect(() => {
+    if (!isAndroidApp()) {
+      return;
+    }
+    let disposed = false;
+    // `onBackButtonPress` resolves to Tauri's `PluginListener`, not a bare
+    // unsubscribe function — cleanup must go through `unregister()`.
+    let unlisten: PluginListener | undefined;
+    void onBackButtonPress(() => {
+      // Innermost first: an open dialog, then the drawer, then the Settings
+      // fallback. At the Settings root there is nothing left to close, so the
+      // finish Android would normally perform has to be asked for explicitly —
+      // registering this listener is what cancelled it.
+      const action = resolveBackAction({
+        handlerConsumed: runTopBackHandler(),
+        drawerVisible: sidebarDrawerVisible,
+        settingsActive,
+      });
+
+      if (action === "drawer") {
+        setSidebarDrawerOpen(false);
+      } else if (action === "settings") {
+        onNavigate("settings");
+      } else if (action === "exit") {
+        void requestAppExit();
+      }
+    }).then((dispose) => {
+      if (disposed) {
+        void dispose.unregister();
+      } else {
+        unlisten = dispose;
+      }
+    });
+    return () => {
+      disposed = true;
+      void unlisten?.unregister();
+    };
+  }, [onNavigate, settingsActive, sidebarDrawerVisible]);
 
   useEffect(() => {
     try {

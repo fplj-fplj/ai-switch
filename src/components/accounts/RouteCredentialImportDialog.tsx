@@ -19,6 +19,7 @@ import type {
   RouteCredentialImportPreviewItem,
   TransferPlatformChoice,
 } from "../../lib/api/types";
+import { pushBackHandler } from "../../lib/backHandler";
 
 export type RouteCredentialImportDialogProps = {
   open: boolean;
@@ -246,6 +247,14 @@ function PreviewRow({
 }
 
 export function RouteCredentialImportDialog({ open, onClose, onImported }: RouteCredentialImportDialogProps) {
+  // The Android back button closes this dialog before anything behind it. Gated
+  // on `open` because the component stays mounted and renders `null` when
+  // closed — an ungated registration would swallow the press with a no-op close.
+  useEffect(() => {
+    if (!open) return;
+    return pushBackHandler(onClose);
+  }, [open, onClose]);
+
   const [sourceText, setSourceText] = useState("");
   const [sourceFileName, setSourceFileName] = useState<string | null>(null);
   const [choices, setChoices] = useState<ChoiceMap>({});

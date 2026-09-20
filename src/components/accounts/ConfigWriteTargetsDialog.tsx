@@ -1,6 +1,7 @@
 import { Check, Copy, Eye, EyeOff, Plug, X } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { ConfigWriteClientStatus, RoutePoolModelMode } from "../../lib/api/types";
+import { pushBackHandler } from "../../lib/backHandler";
 import { copySensitiveText } from "../../lib/routeCredentialTransfer";
 import { routeProxyEndpointForPlatform } from "../../lib/routeProxyEndpoint";
 
@@ -257,6 +258,11 @@ export function ConfigWriteTargetsDialog({
 
   closeRef.current = onClose;
   loadingRef.current = loading;
+
+  // The Android back button closes this dialog before anything behind it.
+  // Registered on `onClose` rather than a local `handleClose`: the latter is a
+  // fresh function every render, which would re-register the handler each pass.
+  useEffect(() => pushBackHandler(onClose), [onClose]);
 
   useEffect(() => {
     const previousFocus =

@@ -54,9 +54,17 @@ function stubWebSocket() {
 describe("transport", () => {
   beforeEach(() => {
     __resetTransportForTests();
-    delete (window as TauriWindow).__TAURI_INTERNALS__;
-    delete (window as TauriWindow).__TAURI_EVENT_PLUGIN_INTERNALS__;
-    delete (window as TauriWindow).isTauri;
+    // The deletes need a view where every property is optional: the global
+    // Tauri augmentation declares `__TAURI_EVENT_PLUGIN_INTERNALS__` as
+    // required, and TS refuses `delete` on a non-optional property.
+    const tauriWindow = window as unknown as {
+      __TAURI_INTERNALS__?: unknown;
+      __TAURI_EVENT_PLUGIN_INTERNALS__?: unknown;
+      isTauri?: unknown;
+    };
+    delete tauriWindow.__TAURI_INTERNALS__;
+    delete tauriWindow.__TAURI_EVENT_PLUGIN_INTERNALS__;
+    delete tauriWindow.isTauri;
     window.localStorage.clear();
     vi.unstubAllGlobals();
   });
@@ -73,7 +81,7 @@ describe("transport", () => {
   });
 
   it("uses tauri transport when the Tauri v2 runtime flag is present", () => {
-    (window as TauriWindow).isTauri = true;
+    (window as unknown as TauriWindow).isTauri = true;
 
     expect(isDesktop()).toBe(true);
     expect(getTransport().isDesktop()).toBe(true);
@@ -82,7 +90,7 @@ describe("transport", () => {
   it("calls Tauri commands through injected IPC without dynamic imports", async () => {
     const response = [{ id: "claude-account" }];
     const invoke = vi.fn().mockResolvedValue(response);
-    (window as TauriWindow).__TAURI_INTERNALS__ = { invoke };
+    (window as unknown as TauriWindow).__TAURI_INTERNALS__ = { invoke };
 
     await expect(getTransport().call("list_route_credentials", { platform: "claude" })).resolves.toEqual(response);
 
@@ -97,7 +105,7 @@ describe("transport", () => {
       recoverable: true,
       operation_id: "operation-1",
     });
-    (window as TauriWindow).__TAURI_INTERNALS__ = { invoke };
+    (window as unknown as TauriWindow).__TAURI_INTERNALS__ = { invoke };
 
     await expect(new TauriTransport().call("write_route_proxy_configs")).rejects.toMatchObject({
       name: "ApiClientError",
@@ -118,8 +126,8 @@ describe("transport", () => {
       return 7;
     });
     const unregisterListener = vi.fn();
-    (window as TauriWindow).__TAURI_INTERNALS__ = { invoke, transformCallback };
-    (window as TauriWindow).__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener };
+    (window as unknown as TauriWindow).__TAURI_INTERNALS__ = { invoke, transformCallback };
+    (window as unknown as TauriWindow).__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener };
     const handler = vi.fn();
 
     const unsubscribe = await new TauriTransport().subscribe<string>("terminal://output", handler);

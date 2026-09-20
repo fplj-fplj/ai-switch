@@ -22,11 +22,11 @@ pub async fn get_session_usage_stats(since: Option<String>) -> Result<SessionUsa
         .map_err(ApiError::from)
 }
 
-/// Reload model price overrides from `~/.ai-switch/model-prices.json` and return
-/// how many entries were loaded.
+/// Reload model price overrides from the app data directory and return how many
+/// entries were loaded.
 #[tauri::command]
-pub async fn reload_model_price_overrides() -> Result<usize, ApiError> {
-    reload_model_price_overrides_core()
+pub async fn reload_model_price_overrides(state: State<'_, AppState>) -> Result<usize, ApiError> {
+    reload_model_price_overrides_core(&state.paths)
         .await
         .map_err(ApiError::from)
 }
@@ -54,15 +54,20 @@ pub async fn get_usage_overview(
 }
 
 #[tauri::command]
-pub async fn get_model_price_configs() -> Result<HashMap<String, ModelPriceConfig>, ApiError> {
-    get_model_price_configs_core().await.map_err(ApiError::from)
+pub async fn get_model_price_configs(
+    state: State<'_, AppState>,
+) -> Result<HashMap<String, ModelPriceConfig>, ApiError> {
+    get_model_price_configs_core(&state.paths)
+        .await
+        .map_err(ApiError::from)
 }
 
 #[tauri::command]
 pub async fn save_model_price_configs(
+    state: State<'_, AppState>,
     configs: HashMap<String, ModelPriceConfig>,
 ) -> Result<usize, ApiError> {
-    save_model_price_configs_core(configs)
+    save_model_price_configs_core(&state.paths, configs)
         .await
         .map_err(ApiError::from)
 }
