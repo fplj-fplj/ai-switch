@@ -57,6 +57,7 @@ const agentItems: AgentNavItem[] = [
 
 - **不改桌面端任何界面代码。** 桌面端继续走现有 `App.tsx` 与 `AppLayout.tsx`。
 - **不改任何 Rust 代码。** 现有 79 个移动端命令够用，本次纯前端。
+- **不做深链（deeplink）导入。** 移动端没有注册这个能力：`AndroidManifest.xml` 里没有 `intent-filter`，`mobile.rs` 也明确是桌面 `run()` 减去 deep links，所以移动端收不到 `aiswitch://` 链接。要支持它得同时改 Rust 与 Manifest，与「本次纯前端」冲突，且需要真机验证 intent 分发。移动端已有更顺手的替代：`import_official_route_credentials_from_text`（粘贴导入）与 `import_external_client_accounts`。
 - **不改 `AccountsScreen.tsx` 与 `AppLayout.tsx`。** 桌面端仍在使用，保持逐字节不变。
 - 不删除 `VibeScreen.tsx` 等桌面专属界面（它们在桌面端仍在用）。
 - 不改 i18n 的语言集合（仍只有 `zh-CN`）。
@@ -217,7 +218,8 @@ type EditTab     = "basic" | "advanced" | "failure" | "other";        // 四个�
 
 | 模块 | 职责 | 现有对应物 |
 | --- | --- | --- |
-| `CredentialList` | 虚拟化列表 + 平台筛选 + 视图切换 | `AccountView` 四态 + `accountLayoutOptions` |
+| `PlatformFilterChips` | 顶部横滑平台筛选 chips | 现有七个顶层入口的等价物 |
+| `CredentialList` | 列表 + 视图切换 | `AccountView` 四态 + `accountLayoutOptions` |
 | `CredentialDetail` | 全屏面板，四个分页 | `EditTab` + `FormTabs` |
 | `CredentialCreate` | 两步向导 | `CreateMode` + `CreateTab` |
 | `PoolMembership` | 池成员、分组、排序、移动 | `RoutePoolAction` |
@@ -227,9 +229,26 @@ type EditTab     = "basic" | "advanced" | "failure" | "other";        // 四个�
 | `ModelMapping` | 模型映射与定价 | `ModelMappingSummary` + `ModelPricingDialog` |
 | `TransferSheet` | 导入导出 | `RouteCredentialExportDialog` / `RouteCredentialImportDialog` |
 
+### 两个维度的取舍：状态做主切换，平台做 chips
+
+凭据页有两个正交维度——**状态**（`AccountView` 四态：池内 / 池外 / 归档 / 统计）与**平台**（七选一）。移动端屏幕只容得下一个主切换，因此：
+
+- **状态**做主导航（分段控件），因为它是「我要看哪一类」的粗筛。
+- **平台**做顶部一行横滑 chips，因为它是日常最高频的切换动作，藏进筛选面板会多两步。
+
+**chips 只显示池内实际存在的平台**，不是固定七个。固定七项会导致常年有四个空 chips 占据屏幕，而实际配置通常只涉及 1–3 个平台。
+
+不做「按平台分组的折叠视图」：那会让两个维度抢同一块屏幕，手机上要滚动两层，而分组视图的价值（分组多且每组都长）在这个数据形态下不成立。
+
 ### 形态变化：对话框 → 全屏面板
 
 移动端最大的一处交互改动。现有实现用 4 个分页的对话框承载凭据编辑，在 6 英寸屏上不可用。改为 Radix `Dialog` + 全屏内容区，分页用 `Tabs` 顶部横滑，底部固定操作条。
+
+### 网关页的实时日志上限
+
+默认只渲染**最近 50 条**，底部「查看全部」进全屏面板看完整历史与原始报文。
+
+两个理由：一是日志条目带完整报文（`LiveLogStage` 渲染 `client_request` / `target_url`，`AccountsScreen.tsx:514`），单条可能很长，50 条在手机上已需滚好几屏；二是网关页是**常驻页面**，无限累积会持续吃内存，且每个新条目都触发重渲染。因此用**环形缓冲**（固定容量、原地覆盖），而不是对累积数组做 `slice`——后者每次推送都新建数组，等于把内存问题换个地方。
 
 ## 数据访问层
 
@@ -270,9 +289,18 @@ type EditTab     = "basic" | "advanced" | "failure" | "other";        // 四个�
 | **i18n 键膨胀** | 新界面按功能域加键；不复用语义不符的旧键 |
 | **两套界面长期分叉** | 业务逻辑在 Rust，天然不分叉；前端仅展示层重复。若将来要收敛，可反向把移动端组件提升为共用 |
 
-## 未决问题
+## 已决问题
 
-1. **凭据页是否需要「按平台分组」的折叠视图**，还是纯平铺 + 筛选器？折叠视图在凭据数量多时更好找，但多一层交互。
-2. **网关页的实时日志**在移动端保留多少行？现有实现是完整流式日志，手机上可能只需最近 N 条 + 「查看全部」。
-3. **是否需要保留「7 个平台」的快捷筛选 chips**（而非藏在筛选器里）？这决定日常切换平台的步数。
-4. **深链（deeplink）导入**在移动端没有入口（`DeepLinkImportDialog` 挂在 `App.tsx`，桌面路径）。移动端是否需要？
+评审中确认的四项，均已写入上文对应章节：
+
+1. **凭据页的平台维度** → **平台筛选 chips + 平铺列表**，不做按平台分组的折叠视图。状态（`AccountView` 四态）做主切换，平台做 chips。理由见「两个维度的取舍」。
+2. **平台快捷 chips** → **做**，且**只显示池内实际存在的平台**，不是固定七项。理由见同上。
+3. **网关页实时日志** → 默认**最近 50 条** + 「查看全部」全屏面板，用环形缓冲实现。理由见「网关页的实时日志上限」。
+4. **深链导入** → **本次不做**，已写入「不做」清单并注明原因（移动端未注册该能力，需改 Rust 与 Manifest，且需真机验证）。
+
+## 评审状态
+
+- 2026-09-21：方向变更与方案初稿，待评审。
+- 2026-09-21：四个未决问题经评审确认，方案定稿待开工。
+
+**开工前请确认**：`P0` 之前无阻塞项；`P2` 是唯一触碰桌面文件的阶段，建议单独评审。
