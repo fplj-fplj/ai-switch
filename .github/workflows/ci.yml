@@ -200,7 +200,15 @@ jobs:
     name: Android APK (aarch64)
     runs-on: ubuntu-latest
     needs: android-cross-check
-    if: github.event_name == 'workflow_dispatch'
+    # The APK is the only artifact that can actually be tested. There is no browser
+    # and no device attached to the machine this is developed on, so every visual
+    # and runtime check happens by sideloading this file — which means building it
+    # only on `workflow_dispatch` left a push with nothing to install. Now a push to
+    # the branch the mobile UI work happens on produces one as well.
+    #
+    # `needs: android-cross-check` already keeps this from spending seven minutes of
+    # Gradle on a tree that does not compile.
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/mobile-ui-rewrite'
 
     steps:
       - name: Checkout
