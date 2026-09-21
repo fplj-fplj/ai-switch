@@ -5,6 +5,12 @@ import { installCrashCapture, installSessionHeartbeat, importNativeReports } fro
 import { getRenderProcessSilences } from "./lib/poolRuntime";
 import "virtual:uno.css";
 import "./styles.css";
+// The mobile tree's semantic tokens. Loaded unconditionally because a stylesheet of
+// custom-property definitions costs nothing until something reads one, and only the
+// mobile tree does (`src/mobile/**`). The names are a separate space from the ones
+// `styles.css` defines, so this cannot shadow a desktop token — `tests/designTokens`
+// pins the other half of that, that adding these keeps the desktop palette intact.
+import "./styles/tokens.css";
 
 // Before React, so a failure during the first render is recorded too — that is the
 // one most likely to leave nothing but a blank window.

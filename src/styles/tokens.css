@@ -1,0 +1,56 @@
+/**
+ * Semantic design tokens for the mobile interface.
+ *
+ * A separate file, and a separate naming space, on purpose. `styles.css` already
+ * defines its own custom properties (`--motion-*`, `--vibe-space-*`) and the desktop
+ * panel reads them; nothing here shadows those, and nothing here is referenced by a
+ * desktop component. The two token sets can therefore evolve independently, which is
+ * what keeps the desktop tree byte-identical while this one is rewritten.
+ *
+ * The names are chosen to match what a component written against the shadcn/ui
+ * vocabulary expects — `bg-background`, `text-muted-foreground`, `border-input`.
+ * Those class names generate here as long as `uno.config.ts` maps these variables
+ * into `theme.colors`, which it does, and which was verified to *merge* with
+ * presetUno's own palette rather than replace it (a replacement would have silently
+ * broken every `stone-*` and `slate-*` class the desktop uses).
+ *
+ * The values are light-mode only, and that is deliberate rather than pending: the
+ * app this is replacing has no dark theme to port, so adding one here would create
+ * a second, unreviewed visual system. The existing neutrals are reused (`stone`
+ * rather than shadcn's `zinc`) so the two trees still look like one product.
+ */
+
+:root {
+  --background: #f5f5f4; /* stone-100 */
+  --foreground: #0c0a09; /* stone-950 */
+
+  --card: #ffffff;
+  --card-foreground: #0c0a09; /* stone-950 */
+
+  --popover: #ffffff;
+  --popover-foreground: #0c0a09; /* stone-950 */
+
+  --primary: #0f172a; /* slate-900, matching the existing Button */
+  --primary-foreground: #ffffff;
+
+  --secondary: #f5f5f4; /* stone-100 */
+  --secondary-foreground: #1c1917; /* stone-900 */
+
+  --muted: #f5f5f4; /* stone-100 */
+  --muted-foreground: #78716c; /* stone-500 */
+
+  --accent: #f5f5f4; /* stone-100 */
+  --accent-foreground: #1c1917; /* stone-900 */
+
+  --destructive: #dc2626; /* red-600 */
+  --destructive-foreground: #ffffff;
+
+  --border: #e7e5e4; /* stone-200 */
+  --input: #e7e5e4; /* stone-200 */
+  --ring: #60a5fa; /* blue-400, matching the existing focus ring */
+
+  /* Applied by the mobile shell, measured at runtime the same way the desktop
+     bottom bar does it. Declared here so the layout has a sane value before the
+     first measure runs. */
+  --mobile-nav-height: 56px;
+}

@@ -20,6 +20,12 @@
  * destinations as a static preview so the information architecture can be looked at
  * on a device before any of it is built, and so the APK built from this commit is
  * not simply blank.
+ *
+ * The colours are the semantic tokens from `src/styles/tokens.css`, not literal
+ * `stone-*` shades. That is what makes this skeleton useful beyond a preview: it is
+ * the first real consumer of the token layer, so `tests/designTokens.test.ts` is
+ * checking classes something actually renders rather than a list kept in step by
+ * hand.
  */
 const DESTINATIONS = [
   { title: "网关", detail: "运行状态、端口、访问 key、启停、实时日志" },
@@ -30,14 +36,14 @@ const DESTINATIONS = [
 
 export function MobileApp() {
   return (
-    <div className="flex min-h-screen flex-col bg-stone-100 text-stone-950">
-      <header className="border-b border-stone-200 bg-white px-4 py-3">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <header className="border-b border-border bg-card px-4 py-3">
         <p className="text-[15px] font-semibold">AI Switch</p>
-        <p className="text-[12px] text-stone-500">移动端界面重写中</p>
+        <p className="text-[12px] text-muted-foreground">移动端界面重写中</p>
       </header>
 
       <main className="flex-1 space-y-3 px-4 py-4">
-        <p className="text-[12px] text-stone-500">
+        <p className="text-[12px] text-muted-foreground">
           这是新版移动端界面的骨架。下面四个入口按后端资源的真实边界划分，尚未接入功能。
         </p>
 
@@ -45,10 +51,10 @@ export function MobileApp() {
           {DESTINATIONS.map((item) => (
             <li
               key={item.title}
-              className="rounded-xl border border-stone-200 bg-white px-3 py-3 shadow-sm"
+              className="rounded-xl border border-border bg-card px-3 py-3 shadow-sm"
             >
               <p className="text-[14px] font-semibold">{item.title}</p>
-              <p className="mt-0.5 text-[12px] text-stone-500">{item.detail}</p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">{item.detail}</p>
             </li>
           ))}
         </ul>
