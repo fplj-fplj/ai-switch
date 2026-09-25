@@ -1,6 +1,5 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join, resolve } from "node:path";
 import { createGenerator } from "unocss";
 import { describe, expect, it } from "vitest";
 import config from "../uno.config";
@@ -26,7 +25,12 @@ import config from "../uno.config";
  * designTokens.test.ts, so the unscanned surface stays small on purpose.
  */
 
-const MOBILE_DIR = fileURLToPath(new URL("../src/mobile", import.meta.url));
+// `process.cwd()` is the repo root under vitest, and it is what the other suites
+// that read source files use (ReleaseWorkflow.test.ts, TauriConfig.test.ts,
+// skillCopy.test.ts). `import.meta.url` cannot stand in for it here: the suite
+// runs in the jsdom environment, where the module URL is not a `file:` one, so
+// `fileURLToPath` throws during collection and the whole file fails to load.
+const MOBILE_DIR = resolve(process.cwd(), "src/mobile");
 
 function sourceFiles(dir: string): string[] {
   const out: string[] = [];
