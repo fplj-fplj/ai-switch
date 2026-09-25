@@ -7,7 +7,8 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <!-- Matches --background in src/styles/tokens.css. This is the window behind
-         the WebView, not a colour the web layer uses; see res/values/themes.xml. -->
+    <!-- Matches the background token in src/styles/tokens.css. This is the window
+         behind the WebView, not a colour the web layer uses; see
+         res/values/themes.xml. -->
     <color name="window_background">#FFF5F5F4</color>
 </resources>
