@@ -1,5 +1,10 @@
 <!doctype html>
-<html lang="en">
+<!-- Static lang is zh-CN. This build ships one language (src/lib/i18n), and the
+     only runtime writer of documentElement.lang is I18nProvider — mounted inside
+     App on desktop, inside MobileApp on Android. A correct static value covers the
+     first paint before either provider's effect runs, so screen readers and CJK
+     font fallback are right from the start rather than after hydration. -->
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <!-- `viewport-fit=cover` is what makes `env(safe-area-inset-*)` report real
