@@ -1,6 +1,10 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Theme.ai_switch" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Customize your theme here. -->
+        <!-- The web layer ships light only (src/styles/tokens.css has no dark
+             values). DayNight would paint this window dark grey in system night
+             mode, and that colour is what flashes on screen for the frame before
+             the WebView draws its first pixel. Pinned to the --background token. -->
+        <item name="android:windowBackground">@color/window_background</item>
     </style>
 </resources>

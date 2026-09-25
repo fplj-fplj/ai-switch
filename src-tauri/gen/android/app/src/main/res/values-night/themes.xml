@@ -1,6 +1,10 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Theme.ai_switch" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Customize your theme here. -->
+        <!-- Identical to values/themes.xml on purpose: there is no dark web UI to
+             match, so the night variant must not darken the window behind the
+             WebView either. Kept as a file so a future dark mode has the hook to
+             diverge from. -->
+        <item name="android:windowBackground">@color/window_background</item>
     </style>
 </resources>

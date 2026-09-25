@@ -2,13 +2,24 @@ package io.xyito.ai_switch
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 
 class MainActivity : TauriActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
-    enableEdgeToEdge()
+    // The web layer ships light only (src/styles/tokens.css has no dark values),
+    // so both bars are pinned to the light style: dark icons, drawn over our own
+    // light background. The default `SystemBarStyle.auto` follows the system's
+    // night mode, which would flip the icons to white — on this app's light
+    // header they would be invisible. Transparent scrims because #root paints
+    // the background and consumes the insets (src/styles.css).
+    enableEdgeToEdge(
+      statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+      navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+    )
     super.onCreate(savedInstanceState)
     requestNotificationPermissionIfNeeded()
     // The pool is meant to keep answering while this app is in the background, and
